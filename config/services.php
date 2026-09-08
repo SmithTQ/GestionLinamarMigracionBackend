@@ -35,4 +35,8 @@ return [
         ],
     ],
 
+    'google_sheets' => [
+        'credentials' => env('GOOGLE_APPLICATION_CREDENTIALS'),
+    ],
+
 ];

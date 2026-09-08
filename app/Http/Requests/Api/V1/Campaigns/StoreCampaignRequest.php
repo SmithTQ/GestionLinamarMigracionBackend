@@ -1,0 +1,26 @@
+<?php
+
+namespace App\Http\Requests\Api\V1\Campaigns;
+
+use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
+
+class StoreCampaignRequest extends FormRequest
+{
+    public function authorize(): bool { return true; }
+
+    public function rules(): array
+    {
+        return [
+            'code' => ['required', 'string', 'max:40', 'alpha_dash', 'unique:campaigns,code'],
+            'name' => ['required', 'string', 'max:150'],
+            'status' => ['sometimes', Rule::in(['draft', 'open', 'closed', 'cancelled'])],
+            'starts_on' => ['nullable', 'date'],
+            'ends_on' => ['nullable', 'date', 'after_or_equal:starts_on'],
+            'branch_ids' => ['sometimes', 'array'],
+            'branch_ids.*' => ['integer', 'distinct', 'exists:branches,id'],
+            'district_ids' => ['sometimes', 'array'],
+            'district_ids.*' => ['integer', 'distinct', 'exists:districts,id'],
+        ];
+    }
+}

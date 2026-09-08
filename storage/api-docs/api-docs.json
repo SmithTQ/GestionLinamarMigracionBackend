@@ -1,0 +1,1110 @@
+{
+    "openapi": "3.0.0",
+    "info": {
+        "title": "Gestor de Pedidos Linamar API",
+        "description": "Contrato HTTP del backend separado para la gestión de pedidos.",
+        "contact": {
+            "email": "soporte@linamar.local"
+        },
+        "version": "0.1.0"
+    },
+    "servers": [
+        {
+            "url": "http://localhost:8000",
+            "description": "Entorno local Docker"
+        }
+    ],
+    "paths": {
+        "/api/v1/auth/login": {
+            "post": {
+                "tags": [
+                    "Autenticación"
+                ],
+                "summary": "Iniciar sesión",
+                "operationId": "login",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "login",
+                                    "password"
+                                ],
+                                "properties": {
+                                    "login": {
+                                        "type": "string",
+                                        "example": "usuario@linamar.test"
+                                    },
+                                    "password": {
+                                        "type": "string",
+                                        "format": "password",
+                                        "example": "contraseña"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Sesión iniciada"
+                    },
+                    "422": {
+                        "description": "Datos inválidos"
+                    },
+                    "429": {
+                        "description": "Demasiados intentos"
+                    }
+                }
+            }
+        },
+        "/api/v1/auth/logout": {
+            "post": {
+                "tags": [
+                    "Autenticación"
+                ],
+                "summary": "Cerrar la sesión actual",
+                "operationId": "logout",
+                "responses": {
+                    "200": {
+                        "description": "Sesión cerrada"
+                    },
+                    "401": {
+                        "description": "No autenticado"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/auth/me": {
+            "get": {
+                "tags": [
+                    "Autenticación"
+                ],
+                "summary": "Obtener el usuario autenticado",
+                "operationId": "me",
+                "responses": {
+                    "200": {
+                        "description": "Usuario autenticado"
+                    },
+                    "401": {
+                        "description": "No autenticado"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/branches": {
+            "get": {
+                "tags": [
+                    "Sucursales"
+                ],
+                "summary": "Listar sucursales",
+                "operationId": "listBranches",
+                "responses": {
+                    "200": {
+                        "description": "Sucursales obtenidas"
+                    }
+                }
+            },
+            "post": {
+                "tags": [
+                    "Sucursales"
+                ],
+                "summary": "Crear sucursal",
+                "operationId": "createBranch",
+                "responses": {
+                    "201": {
+                        "description": "Sucursal creada"
+                    }
+                }
+            }
+        },
+        "/api/v1/branches/{branch}": {
+            "get": {
+                "tags": [
+                    "Sucursales"
+                ],
+                "summary": "Consultar sucursal",
+                "operationId": "showBranch",
+                "responses": {
+                    "200": {
+                        "description": "Sucursal obtenida"
+                    }
+                }
+            },
+            "delete": {
+                "tags": [
+                    "Sucursales"
+                ],
+                "summary": "Desactivar sucursal",
+                "operationId": "archiveBranch",
+                "responses": {
+                    "200": {
+                        "description": "Sucursal desactivada"
+                    }
+                }
+            },
+            "patch": {
+                "tags": [
+                    "Sucursales"
+                ],
+                "summary": "Actualizar sucursal",
+                "operationId": "updateBranch",
+                "responses": {
+                    "200": {
+                        "description": "Sucursal actualizada"
+                    }
+                }
+            }
+        },
+        "/api/v1/campaigns": {
+            "get": {
+                "tags": [
+                    "Campañas"
+                ],
+                "summary": "Listar campañas",
+                "operationId": "listCampaigns",
+                "responses": {
+                    "200": {
+                        "description": "Campañas obtenidas"
+                    }
+                }
+            },
+            "post": {
+                "tags": [
+                    "Campañas"
+                ],
+                "summary": "Crear campaña",
+                "operationId": "createCampaign",
+                "responses": {
+                    "201": {
+                        "description": "Campaña creada"
+                    }
+                }
+            }
+        },
+        "/api/v1/campaigns/{campaign}": {
+            "get": {
+                "tags": [
+                    "Campañas"
+                ],
+                "summary": "Consultar campaña",
+                "operationId": "showCampaign",
+                "responses": {
+                    "200": {
+                        "description": "Campaña obtenida"
+                    }
+                }
+            },
+            "delete": {
+                "tags": [
+                    "Campañas"
+                ],
+                "summary": "Cerrar campaña",
+                "operationId": "archiveCampaign",
+                "responses": {
+                    "200": {
+                        "description": "Campaña cerrada"
+                    }
+                }
+            },
+            "patch": {
+                "tags": [
+                    "Campañas"
+                ],
+                "summary": "Actualizar campaña",
+                "operationId": "updateCampaign",
+                "responses": {
+                    "200": {
+                        "description": "Campaña actualizada"
+                    }
+                }
+            }
+        },
+        "/api/v1/districts": {
+            "get": {
+                "tags": [
+                    "Distritos"
+                ],
+                "summary": "Listar distritos",
+                "operationId": "listDistricts",
+                "responses": {
+                    "200": {
+                        "description": "Distritos obtenidos"
+                    }
+                }
+            },
+            "post": {
+                "tags": [
+                    "Distritos"
+                ],
+                "summary": "Crear distrito",
+                "operationId": "createDistrict",
+                "responses": {
+                    "201": {
+                        "description": "Distrito creado"
+                    }
+                }
+            }
+        },
+        "/api/v1/districts/{district}": {
+            "get": {
+                "tags": [
+                    "Distritos"
+                ],
+                "summary": "Consultar distrito",
+                "operationId": "showDistrict",
+                "responses": {
+                    "200": {
+                        "description": "Distrito obtenido"
+                    }
+                }
+            },
+            "delete": {
+                "tags": [
+                    "Distritos"
+                ],
+                "summary": "Desactivar distrito",
+                "operationId": "archiveDistrict",
+                "responses": {
+                    "200": {
+                        "description": "Distrito desactivado"
+                    }
+                }
+            },
+            "patch": {
+                "tags": [
+                    "Distritos"
+                ],
+                "summary": "Actualizar distrito",
+                "operationId": "updateDistrict",
+                "responses": {
+                    "200": {
+                        "description": "Distrito actualizado"
+                    }
+                }
+            }
+        },
+        "/api/v1/product-categories": {
+            "get": {
+                "tags": [
+                    "Productos"
+                ],
+                "summary": "Listar categorías",
+                "operationId": "listProductCategories",
+                "responses": {
+                    "200": {
+                        "description": "Categorías obtenidas"
+                    }
+                }
+            },
+            "post": {
+                "tags": [
+                    "Productos"
+                ],
+                "summary": "Crear categoría",
+                "operationId": "createProductCategory",
+                "responses": {
+                    "201": {
+                        "description": "Categoría creada"
+                    }
+                }
+            }
+        },
+        "/api/v1/product-categories/{category}": {
+            "delete": {
+                "tags": [
+                    "Productos"
+                ],
+                "summary": "Desactivar categoría",
+                "operationId": "deleteProductCategory",
+                "responses": {
+                    "200": {
+                        "description": "Categoría desactivada"
+                    }
+                }
+            },
+            "patch": {
+                "tags": [
+                    "Productos"
+                ],
+                "summary": "Actualizar categoría",
+                "operationId": "updateProductCategory",
+                "responses": {
+                    "200": {
+                        "description": "Categoría actualizada"
+                    }
+                }
+            }
+        },
+        "/api/v1/product-subcategories": {
+            "get": {
+                "tags": [
+                    "Productos"
+                ],
+                "summary": "Listar subcategorías",
+                "operationId": "listProductSubcategories",
+                "responses": {
+                    "200": {
+                        "description": "Subcategorías obtenidas"
+                    }
+                }
+            },
+            "post": {
+                "tags": [
+                    "Productos"
+                ],
+                "summary": "Crear subcategoría",
+                "operationId": "createProductSubcategory",
+                "responses": {
+                    "201": {
+                        "description": "Subcategoría creada"
+                    }
+                }
+            }
+        },
+        "/api/v1/product-subcategories/{subcategory}": {
+            "delete": {
+                "tags": [
+                    "Productos"
+                ],
+                "summary": "Desactivar subcategoría",
+                "operationId": "deleteProductSubcategory",
+                "responses": {
+                    "200": {
+                        "description": "Subcategoría desactivada"
+                    }
+                }
+            },
+            "patch": {
+                "tags": [
+                    "Productos"
+                ],
+                "summary": "Actualizar subcategoría",
+                "operationId": "updateProductSubcategory",
+                "responses": {
+                    "200": {
+                        "description": "Subcategoría actualizada"
+                    }
+                }
+            }
+        },
+        "/api/v1/products": {
+            "get": {
+                "tags": [
+                    "Productos"
+                ],
+                "summary": "Listar productos",
+                "operationId": "listProducts",
+                "responses": {
+                    "200": {
+                        "description": "Productos obtenidos"
+                    }
+                }
+            },
+            "post": {
+                "tags": [
+                    "Productos"
+                ],
+                "summary": "Crear producto",
+                "operationId": "createProduct",
+                "responses": {
+                    "201": {
+                        "description": "Producto creado"
+                    }
+                }
+            }
+        },
+        "/api/v1/products/{product}": {
+            "delete": {
+                "tags": [
+                    "Productos"
+                ],
+                "summary": "Desactivar producto",
+                "operationId": "deleteProduct",
+                "responses": {
+                    "200": {
+                        "description": "Producto desactivado"
+                    }
+                }
+            },
+            "patch": {
+                "tags": [
+                    "Productos"
+                ],
+                "summary": "Actualizar producto",
+                "operationId": "updateProduct",
+                "responses": {
+                    "200": {
+                        "description": "Producto actualizado"
+                    }
+                }
+            }
+        },
+        "/api/v1/campaigns/{campaign}/products": {
+            "get": {
+                "tags": [
+                    "Productos"
+                ],
+                "summary": "Listar productos de campaña",
+                "operationId": "listCampaignProducts",
+                "responses": {
+                    "200": {
+                        "description": "Productos de campaña obtenidos"
+                    }
+                }
+            },
+            "put": {
+                "tags": [
+                    "Productos"
+                ],
+                "summary": "Configurar productos de campaña",
+                "operationId": "assignCampaignProducts",
+                "responses": {
+                    "200": {
+                        "description": "Productos de campaña actualizados"
+                    }
+                }
+            }
+        },
+        "/api/v1/customers": {
+            "get": {
+                "tags": [
+                    "Clientes e invitaciones"
+                ],
+                "summary": "Listar clientes",
+                "operationId": "listCustomers",
+                "responses": {
+                    "200": {
+                        "description": "Clientes obtenidos"
+                    }
+                }
+            }
+        },
+        "/api/v1/customers/{customer}": {
+            "get": {
+                "tags": [
+                    "Clientes e invitaciones"
+                ],
+                "summary": "Consultar cliente e historial",
+                "operationId": "showCustomer",
+                "responses": {
+                    "200": {
+                        "description": "Cliente obtenido"
+                    }
+                }
+            }
+        },
+        "/api/v1/customer-invitations": {
+            "get": {
+                "tags": [
+                    "Clientes e invitaciones"
+                ],
+                "summary": "Listar invitaciones",
+                "operationId": "listCustomerInvitations",
+                "responses": {
+                    "200": {
+                        "description": "Invitaciones obtenidas"
+                    }
+                }
+            },
+            "post": {
+                "tags": [
+                    "Clientes e invitaciones"
+                ],
+                "summary": "Generar invitación de WhatsApp",
+                "operationId": "createCustomerInvitation",
+                "responses": {
+                    "201": {
+                        "description": "Invitación generada"
+                    }
+                }
+            }
+        },
+        "/api/v1/customer-invitations/{invitation}/revoke": {
+            "post": {
+                "tags": [
+                    "Clientes e invitaciones"
+                ],
+                "summary": "Revocar invitación",
+                "operationId": "revokeCustomerInvitation",
+                "responses": {
+                    "200": {
+                        "description": "Invitación revocada"
+                    }
+                }
+            }
+        },
+        "/api/v1/couriers": {
+            "get": {
+                "tags": [
+                    "Motorizados"
+                ],
+                "summary": "Listar motorizados",
+                "operationId": "listCouriers",
+                "responses": {
+                    "200": {
+                        "description": "Motorizados obtenidos"
+                    }
+                }
+            },
+            "post": {
+                "tags": [
+                    "Motorizados"
+                ],
+                "summary": "Crear motorizado",
+                "operationId": "createCourier",
+                "responses": {
+                    "201": {
+                        "description": "Motorizado creado"
+                    }
+                }
+            }
+        },
+        "/api/v1/couriers/{courier}": {
+            "patch": {
+                "tags": [
+                    "Motorizados"
+                ],
+                "summary": "Actualizar motorizado",
+                "operationId": "updateCourier",
+                "responses": {
+                    "200": {
+                        "description": "Motorizado actualizado"
+                    }
+                }
+            }
+        },
+        "/api/v1/routes": {
+            "get": {
+                "tags": [
+                    "Rutas"
+                ],
+                "summary": "Listar rutas",
+                "operationId": "listRoutes",
+                "responses": {
+                    "200": {
+                        "description": "Rutas obtenidas"
+                    }
+                }
+            },
+            "post": {
+                "tags": [
+                    "Rutas"
+                ],
+                "summary": "Crear ruta",
+                "operationId": "createRoute",
+                "responses": {
+                    "201": {
+                        "description": "Ruta creada"
+                    }
+                }
+            }
+        },
+        "/api/v1/routes/{route}": {
+            "get": {
+                "tags": [
+                    "Rutas"
+                ],
+                "summary": "Consultar ruta",
+                "operationId": "showRoute",
+                "responses": {
+                    "200": {
+                        "description": "Ruta obtenida"
+                    }
+                }
+            },
+            "patch": {
+                "tags": [
+                    "Rutas"
+                ],
+                "summary": "Actualizar ruta",
+                "operationId": "updateRoute",
+                "responses": {
+                    "200": {
+                        "description": "Ruta actualizada"
+                    }
+                }
+            }
+        },
+        "/api/v1/routes/{route}/courier": {
+            "patch": {
+                "tags": [
+                    "Rutas"
+                ],
+                "summary": "Asignar motorizado",
+                "operationId": "assignCourier",
+                "responses": {
+                    "200": {
+                        "description": "Motorizado asignado"
+                    }
+                }
+            }
+        },
+        "/api/v1/routes/{route}/orders": {
+            "post": {
+                "tags": [
+                    "Rutas"
+                ],
+                "summary": "Agregar pedidos a una ruta",
+                "operationId": "attachOrders",
+                "responses": {
+                    "200": {
+                        "description": "Pedidos agregados"
+                    }
+                }
+            }
+        },
+        "/api/v1/routes/{route}/status": {
+            "patch": {
+                "tags": [
+                    "Rutas"
+                ],
+                "summary": "Cambiar estado de ruta",
+                "operationId": "changeRouteStatus",
+                "responses": {
+                    "200": {
+                        "description": "Estado actualizado"
+                    }
+                }
+            }
+        },
+        "/api/v1/form-templates": {
+            "get": {
+                "tags": [
+                    "Formularios"
+                ],
+                "summary": "Listar plantillas",
+                "operationId": "listFormTemplates",
+                "responses": {
+                    "200": {
+                        "description": "Plantillas obtenidas"
+                    }
+                }
+            }
+        },
+        "/api/v1/campaign-forms": {
+            "get": {
+                "tags": [
+                    "Formularios"
+                ],
+                "summary": "Listar formularios",
+                "operationId": "listCampaignForms",
+                "responses": {
+                    "200": {
+                        "description": "Formularios obtenidos"
+                    }
+                }
+            },
+            "post": {
+                "tags": [
+                    "Formularios"
+                ],
+                "summary": "Crear formulario",
+                "operationId": "createCampaignForm",
+                "responses": {
+                    "201": {
+                        "description": "Formulario creado"
+                    }
+                }
+            }
+        },
+        "/api/v1/campaign-forms/{form}": {
+            "get": {
+                "tags": [
+                    "Formularios"
+                ],
+                "summary": "Consultar formulario",
+                "operationId": "showCampaignForm",
+                "responses": {
+                    "200": {
+                        "description": "Formulario obtenido"
+                    }
+                }
+            },
+            "patch": {
+                "tags": [
+                    "Formularios"
+                ],
+                "summary": "Actualizar formulario",
+                "operationId": "updateCampaignForm",
+                "responses": {
+                    "200": {
+                        "description": "Formulario actualizado"
+                    }
+                }
+            }
+        },
+        "/api/v1/campaign-forms/{form}/publish": {
+            "post": {
+                "tags": [
+                    "Formularios"
+                ],
+                "summary": "Publicar formulario",
+                "operationId": "publishCampaignForm",
+                "responses": {
+                    "200": {
+                        "description": "Formulario publicado"
+                    }
+                }
+            }
+        },
+        "/api/v1/campaign-forms/{form}/close": {
+            "post": {
+                "tags": [
+                    "Formularios"
+                ],
+                "summary": "Cerrar formulario",
+                "operationId": "closeCampaignForm",
+                "responses": {
+                    "200": {
+                        "description": "Formulario cerrado"
+                    }
+                }
+            }
+        },
+        "/api/v1/public/invitations/{token}": {
+            "get": {
+                "tags": [
+                    "Formularios públicos"
+                ],
+                "summary": "Consultar invitación",
+                "operationId": "showPublicInvitation",
+                "responses": {
+                    "200": {
+                        "description": "Invitación obtenida"
+                    }
+                }
+            }
+        },
+        "/api/v1/public/invitations/{token}/submissions": {
+            "post": {
+                "tags": [
+                    "Formularios públicos"
+                ],
+                "summary": "Enviar invitación",
+                "operationId": "submitPublicInvitation",
+                "responses": {
+                    "201": {
+                        "description": "Pedido creado"
+                    }
+                }
+            }
+        },
+        "/api/v1/public/forms/{publicKey}": {
+            "get": {
+                "tags": [
+                    "Formularios públicos"
+                ],
+                "summary": "Consultar formulario público",
+                "operationId": "showPublicCampaignForm",
+                "responses": {
+                    "200": {
+                        "description": "Formulario público obtenido"
+                    }
+                }
+            }
+        },
+        "/api/v1/public/forms/{publicKey}/submissions": {
+            "post": {
+                "tags": [
+                    "Formularios públicos"
+                ],
+                "summary": "Enviar formulario público",
+                "operationId": "submitPublicCampaignForm",
+                "responses": {
+                    "201": {
+                        "description": "Pedido creado"
+                    },
+                    "200": {
+                        "description": "Envío duplicado"
+                    }
+                }
+            }
+        },
+        "/api/v1/imports/google-sheets": {
+            "post": {
+                "tags": [
+                    "Importaciones"
+                ],
+                "summary": "Importar pedidos desde Google Sheets",
+                "operationId": "importGoogleSheets",
+                "responses": {
+                    "201": {
+                        "description": "Importación procesada"
+                    },
+                    "502": {
+                        "description": "Error de conexión con Google"
+                    }
+                }
+            }
+        },
+        "/api/v1/imports/{import}": {
+            "get": {
+                "tags": [
+                    "Importaciones"
+                ],
+                "summary": "Consultar importación",
+                "operationId": "showImport",
+                "responses": {
+                    "200": {
+                        "description": "Importación obtenida"
+                    }
+                }
+            }
+        },
+        "/api/v1/orders": {
+            "get": {
+                "tags": [
+                    "Pedidos"
+                ],
+                "summary": "Listar pedidos",
+                "operationId": "listOrders",
+                "responses": {
+                    "200": {
+                        "description": "Pedidos obtenidos"
+                    }
+                }
+            },
+            "post": {
+                "tags": [
+                    "Pedidos"
+                ],
+                "summary": "Crear pedido",
+                "operationId": "createOrder",
+                "responses": {
+                    "201": {
+                        "description": "Pedido creado"
+                    },
+                    "200": {
+                        "description": "Pedido ya existente por idempotencia"
+                    }
+                }
+            }
+        },
+        "/api/v1/orders/{order}": {
+            "get": {
+                "tags": [
+                    "Pedidos"
+                ],
+                "summary": "Consultar pedido",
+                "operationId": "showOrder",
+                "responses": {
+                    "200": {
+                        "description": "Pedido obtenido"
+                    }
+                }
+            },
+            "delete": {
+                "tags": [
+                    "Pedidos"
+                ],
+                "summary": "Inhabilitar pedido",
+                "operationId": "archiveOrder",
+                "responses": {
+                    "200": {
+                        "description": "Pedido inhabilitado"
+                    }
+                }
+            },
+            "patch": {
+                "tags": [
+                    "Pedidos"
+                ],
+                "summary": "Actualizar datos operativos",
+                "operationId": "updateOrder",
+                "responses": {
+                    "200": {
+                        "description": "Pedido actualizado"
+                    }
+                }
+            }
+        },
+        "/api/v1/orders/{order}/status": {
+            "patch": {
+                "tags": [
+                    "Pedidos"
+                ],
+                "summary": "Cambiar estado del pedido",
+                "operationId": "changeOrderStatus",
+                "responses": {
+                    "200": {
+                        "description": "Estado actualizado"
+                    }
+                }
+            }
+        },
+        "/api/v1/users": {
+            "get": {
+                "tags": [
+                    "Usuarios"
+                ],
+                "summary": "Listar usuarios",
+                "operationId": "listUsers",
+                "responses": {
+                    "200": {
+                        "description": "Usuarios obtenidos"
+                    }
+                }
+            },
+            "post": {
+                "tags": [
+                    "Usuarios"
+                ],
+                "summary": "Crear usuario",
+                "operationId": "createUser",
+                "responses": {
+                    "201": {
+                        "description": "Usuario creado"
+                    }
+                }
+            }
+        },
+        "/api/v1/users/{user}": {
+            "get": {
+                "tags": [
+                    "Usuarios"
+                ],
+                "summary": "Consultar usuario",
+                "operationId": "showUser",
+                "responses": {
+                    "200": {
+                        "description": "Usuario obtenido"
+                    }
+                }
+            },
+            "delete": {
+                "tags": [
+                    "Usuarios"
+                ],
+                "summary": "Desactivar usuario",
+                "operationId": "deactivateUser",
+                "responses": {
+                    "200": {
+                        "description": "Usuario desactivado"
+                    }
+                }
+            },
+            "patch": {
+                "tags": [
+                    "Usuarios"
+                ],
+                "summary": "Actualizar usuario",
+                "operationId": "updateUser",
+                "responses": {
+                    "200": {
+                        "description": "Usuario actualizado"
+                    }
+                }
+            }
+        },
+        "/api/v1/roles": {
+            "get": {
+                "tags": [
+                    "Usuarios"
+                ],
+                "summary": "Listar roles",
+                "operationId": "listRoles",
+                "responses": {
+                    "200": {
+                        "description": "Roles obtenidos"
+                    }
+                }
+            }
+        },
+        "/api/v1/permissions": {
+            "get": {
+                "tags": [
+                    "Usuarios"
+                ],
+                "summary": "Listar permisos",
+                "operationId": "listPermissions",
+                "responses": {
+                    "200": {
+                        "description": "Permisos obtenidos"
+                    }
+                }
+            }
+        }
+    },
+    "components": {
+        "securitySchemes": {
+            "sanctum": {
+                "type": "http",
+                "description": "Token personal emitido por Laravel Sanctum",
+                "bearerFormat": "token",
+                "scheme": "bearer"
+            }
+        }
+    },
+    "tags": [
+        {
+            "name": "Sucursales",
+            "description": "Catálogo y ámbito de sucursales"
+        },
+        {
+            "name": "Campañas",
+            "description": "Campañas y su ámbito de sucursales"
+        },
+        {
+            "name": "Distritos",
+            "description": "Catálogo de distritos y zonas de entrega"
+        },
+        {
+            "name": "Productos",
+            "description": "Catálogo de productos y asignación por campaña"
+        },
+        {
+            "name": "Clientes e invitaciones",
+            "description": "Clientes e invitaciones gratuitas por WhatsApp Web"
+        },
+        {
+            "name": "Motorizados",
+            "description": "Catálogo y disponibilidad de motorizados"
+        },
+        {
+            "name": "Rutas",
+            "description": "Planificación, asignación y despacho"
+        },
+        {
+            "name": "Formularios",
+            "description": "Formularios configurables por campaña"
+        },
+        {
+            "name": "Formularios públicos",
+            "description": "Consulta y envío público de pedidos"
+        },
+        {
+            "name": "Importaciones",
+            "description": "Importación de pedidos desde Google Sheets"
+        },
+        {
+            "name": "Pedidos",
+            "description": "Pedidos, filtros y transiciones de estado"
+        },
+        {
+            "name": "Usuarios",
+            "description": "Usuarios, roles, permisos y ámbitos"
+        },
+        {
+            "name": "Autenticación",
+            "description": "Autenticación"
+        }
+    ],
+    "security": [
+        {
+            "sanctum": []
+        }
+    ]
+}
