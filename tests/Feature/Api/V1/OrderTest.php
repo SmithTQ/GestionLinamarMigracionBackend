@@ -46,6 +46,23 @@ class OrderTest extends TestCase
         $this->assertDatabaseCount('orders', 1);
 
         $this->withToken($token)
+            ->patchJson('/api/v1/orders/'.$first->json('datos.id'), ['delivery_date' => '15-11-2026', 'delivery_time' => 'Por la tarde'])
+            ->assertOk()
+            ->assertJsonPath('datos.delivery_date', '15/11/2026')
+            ->assertJsonPath('datos.delivery_date_iso', '2026-11-15')
+            ->assertJsonPath('datos.delivery_time', 'Por la tarde')
+            ->assertJsonPath('datos.created_at', fn ($value) => preg_match('/^\d{2}\/\d{2}\/\d{4} \d{2}:\d{2}$/', $value) === 1);
+
+        $this->withToken($token)
+            ->getJson('/api/v1/orders?delivery_date=15-11-2026')
+            ->assertOk()
+            ->assertJsonPath('paginacion.total', 1);
+
+        $this->withToken($token)
+            ->getJson('/api/v1/orders?delivery_date=31/02/2026')
+            ->assertStatus(422);
+
+        $this->withToken($token)
             ->patchJson('/api/v1/orders/'.$first->json('datos.id').'/status', ['status' => 'validated'])
             ->assertOk()
             ->assertJsonPath('datos.status', 'validated');

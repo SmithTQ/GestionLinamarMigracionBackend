@@ -2,9 +2,12 @@
 
 namespace App\Http\Resources\Api\V1\Dispatch;
 
+use App\Http\Resources\Api\V1\BranchResource;
+use App\Models\Courier;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
+/** @mixin Courier */
 class CourierResource extends JsonResource
 {
     public function toArray(Request $request): array
@@ -16,7 +19,7 @@ class CourierResource extends JsonResource
             'description' => $this->description,
             'is_available' => $this->is_available,
             'is_active' => $this->is_active,
-            'branches' => \App\Http\Resources\Api\V1\BranchResource::collection($this->whenLoaded('branches')),
+            'branches' => BranchResource::collection($this->whenLoaded('branches')),
         ];
     }
 }

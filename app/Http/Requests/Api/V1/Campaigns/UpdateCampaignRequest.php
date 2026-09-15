@@ -7,7 +7,10 @@ use Illuminate\Validation\Rule;
 
 class UpdateCampaignRequest extends FormRequest
 {
-    public function authorize(): bool { return true; }
+    public function authorize(): bool
+    {
+        return true;
+    }
 
     public function rules(): array
     {
@@ -19,8 +22,8 @@ class UpdateCampaignRequest extends FormRequest
             'ends_on' => ['nullable', 'date', 'after_or_equal:starts_on'],
             'branch_ids' => ['sometimes', 'array'],
             'branch_ids.*' => ['integer', 'distinct', 'exists:branches,id'],
-            'district_ids' => ['sometimes', 'array'],
-            'district_ids.*' => ['integer', 'distinct', 'exists:districts,id'],
+            'district_list_ids' => ['sometimes', 'array'],
+            'district_list_ids.*' => ['integer', 'distinct', 'exists:district_lists,id'],
         ];
     }
 }

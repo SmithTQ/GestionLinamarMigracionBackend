@@ -33,7 +33,13 @@ class UserManagementTest extends TestCase
             ->assertJsonPath('datos.roles.0.slug', 'viewer');
 
         $this->withToken($token)->getJson('/api/v1/roles')->assertOk()->assertJsonCount(5, 'datos');
-        $this->withToken($token)->getJson('/api/v1/permissions')->assertOk()->assertJsonCount(14, 'datos');
+        $this->withToken($token)->getJson('/api/v1/permissions')
+            ->assertOk()
+            ->assertJsonCount(18, 'datos')
+            ->assertJsonFragment(['slug' => 'districts.view'])
+            ->assertJsonFragment(['slug' => 'district_lists.view'])
+            ->assertJsonFragment(['slug' => 'forms.manage'])
+            ->assertJsonFragment(['slug' => 'orders.manage']);
     }
 
     public function test_user_cannot_deactivate_itself(): void

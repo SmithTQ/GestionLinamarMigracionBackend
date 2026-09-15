@@ -41,6 +41,7 @@ class DeliveryRouteController extends Controller
             ->when($request->filled('dispatched_to'), fn ($query) => $query->whereDate('dispatched_at', '<=', $request->date('dispatched_to')))
             ->tap(fn ($query) => $this->applySorting($query, $request, ['id' => 'id', 'code' => 'code', 'name' => 'name', 'status' => 'status', 'dispatched_at' => 'dispatched_at', 'created_at' => 'created_at'], 'id', 'desc'))
             ->paginate(min($request->integer('per_page', 20), 100));
+
         return $this->paginatedResponse('Rutas obtenidas.', $routes, DeliveryRouteResource::class);
     }
 
@@ -54,6 +55,7 @@ class DeliveryRouteController extends Controller
         abort_if($campaign->status !== 'open', 422, 'La campaña debe estar abierta.');
 
         $route = DeliveryRoute::create($data);
+
         return response()->json(['codigo' => 201, 'mensaje' => 'Ruta creada.', 'datos' => new DeliveryRouteResource($route->load(['campaign', 'branch']))], 201);
     }
 
@@ -61,6 +63,7 @@ class DeliveryRouteController extends Controller
     public function show(Request $request, int $route): JsonResponse
     {
         $model = $this->visibleQuery($request->user())->with(['campaign', 'branch', 'courier', 'orders'])->findOrFail($route);
+
         return response()->json(['codigo' => 200, 'mensaje' => 'Ruta obtenida.', 'datos' => new DeliveryRouteResource($model)]);
     }
 
@@ -70,6 +73,7 @@ class DeliveryRouteController extends Controller
         $model = $this->visibleQuery($request->user())->findOrFail($route);
         abort_if(in_array($model->status, ['dispatched', 'completed', 'cancelled'], true), 422, 'La ruta ya no admite cambios.');
         $model->update($request->validated());
+
         return response()->json(['codigo' => 200, 'mensaje' => 'Ruta actualizada.', 'datos' => new DeliveryRouteResource($model->fresh(['campaign', 'branch', 'courier']))]);
     }
 
@@ -81,6 +85,7 @@ class DeliveryRouteController extends Controller
         $courier = Courier::where('is_active', true)->where('is_available', true)->findOrFail($request->integer('courier_id'));
         abort_unless($courier->branches()->whereKey($model->branch_id)->exists() || $courier->branches()->count() === 0, 422, 'El motorizado no está habilitado para la sucursal.');
         $model->update(['courier_id' => $courier->id, 'status' => 'assigned']);
+
         return response()->json(['codigo' => 200, 'mensaje' => 'Motorizado asignado.', 'datos' => new DeliveryRouteResource($model->fresh(['campaign', 'branch', 'courier']))]);
     }
 
@@ -113,8 +118,11 @@ class DeliveryRouteController extends Controller
         $next = $request->string('status')->toString();
         $allowed = ['draft' => ['planned', 'cancelled'], 'planned' => ['assigned', 'cancelled'], 'assigned' => ['dispatched', 'cancelled'], 'dispatched' => ['completed'], 'completed' => [], 'cancelled' => []];
         abort_unless(in_array($next, $allowed[$model->status] ?? [], true), 422, 'La transición de estado no está permitida.');
-        if ($next === 'dispatched') abort_if(! $model->courier_id || $model->active_orders_count < 1, 422, 'La ruta necesita motorizado y al menos un pedido.');
+        if ($next === 'dispatched') {
+            abort_if(! $model->courier_id || $model->active_orders_count < 1, 422, 'La ruta necesita motorizado y al menos un pedido.');
+        }
         $model->update(['status' => $next, 'dispatched_at' => $next === 'dispatched' ? now() : $model->dispatched_at]);
+
         return response()->json(['codigo' => 200, 'mensaje' => 'Estado de ruta actualizado.', 'datos' => new DeliveryRouteResource($model->fresh(['campaign', 'branch', 'courier']))]);
     }
 
@@ -124,12 +132,15 @@ class DeliveryRouteController extends Controller
         if (! $actor->hasRole('super_admin')) {
             $query->whereHas('campaign.users', fn ($relation) => $relation->whereKey($actor->id))->whereHas('branch.users', fn ($relation) => $relation->whereKey($actor->id));
         }
+
         return $query;
     }
 
     private function ensureScope(User $actor, Campaign $campaign, Branch $branch): void
     {
         abort_unless($campaign->branches()->whereKey($branch->id)->exists(), 422, 'La sucursal no pertenece a la campaña.');
-        if (! $actor->hasRole('super_admin')) abort_unless($campaign->users()->whereKey($actor->id)->exists() && $branch->users()->whereKey($actor->id)->exists(), 403, 'La ruta está fuera de tu ámbito.');
+        if (! $actor->hasRole('super_admin')) {
+            abort_unless($campaign->users()->whereKey($actor->id)->exists() && $branch->users()->whereKey($actor->id)->exists(), 403, 'La ruta está fuera de tu ámbito.');
+        }
     }
 }

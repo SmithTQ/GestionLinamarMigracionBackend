@@ -19,6 +19,4 @@ use OpenApi\Attributes as OA;
     description: 'Token personal emitido por Laravel Sanctum',
 )]
 #[OA\Tag(name: 'Sistema', description: 'Endpoints base del backend')]
-final class Documentation
-{
-}
+final class Documentation {}

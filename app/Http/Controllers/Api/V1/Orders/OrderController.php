@@ -12,10 +12,12 @@ use App\Models\Campaign;
 use App\Models\Order;
 use App\Models\Product;
 use App\Models\User;
+use App\Services\DeliveryDateNormalizer;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use InvalidArgumentException;
 use OpenApi\Attributes as OA;
 
 #[OA\Tag(name: 'Pedidos', description: 'Pedidos, filtros y transiciones de estado')]
@@ -24,13 +26,22 @@ class OrderController extends Controller
     #[OA\Get(path: '/api/v1/orders', operationId: 'listOrders', tags: ['Pedidos'], summary: 'Listar pedidos', responses: [new OA\Response(response: 200, description: 'Pedidos obtenidos')])]
     public function index(Request $request): JsonResponse
     {
+        $deliveryDate = null;
+        if ($request->has('delivery_date')) {
+            try {
+                $deliveryDate = DeliveryDateNormalizer::normalize($request->input('delivery_date'));
+            } catch (InvalidArgumentException) {
+                abort(422, 'El formato de delivery_date no es válido.');
+            }
+        }
+
         $orders = $this->visibleQuery($request->user())
-            ->with(['campaign', 'branch', 'districtCatalog', 'product'])
+            ->with(['campaign', 'branch', 'districtCatalog', 'product', 'formSubmission.form.fields', 'formSubmission.files.field'])
             ->when($request->filled('campaign_id'), fn (Builder $query) => $query->where('campaign_id', $request->integer('campaign_id')))
             ->when($request->filled('branch_id'), fn (Builder $query) => $query->where('branch_id', $request->integer('branch_id')))
             ->when($request->filled('status'), fn (Builder $query) => $query->where('status', $request->string('status')->toString()))
             ->when($request->filled('district'), fn (Builder $query) => $query->where('district', 'like', '%'.$request->string('district')->toString().'%'))
-            ->when($request->filled('delivery_date'), fn (Builder $query) => $query->whereDate('delivery_date', $request->date('delivery_date')))
+            ->when($deliveryDate !== null, fn (Builder $query) => $query->whereDate('delivery_date', $deliveryDate))
             ->tap(fn ($query) => $this->applySorting($query, $request, ['id' => 'id', 'order_number' => 'order_number', 'product_name' => 'product_name', 'recipient_name' => 'recipient_name', 'district' => 'district', 'delivery_date' => 'delivery_date', 'status' => 'status', 'created_at' => 'created_at'], 'id', 'desc'))
             ->paginate(min($request->integer('per_page', 20), 100));
 
@@ -63,7 +74,7 @@ class OrderController extends Controller
     #[OA\Get(path: '/api/v1/orders/{order}', operationId: 'showOrder', tags: ['Pedidos'], summary: 'Consultar pedido', responses: [new OA\Response(response: 200, description: 'Pedido obtenido')])]
     public function show(Request $request, int $order): JsonResponse
     {
-        $model = $this->visibleQuery($request->user())->with(['campaign', 'branch', 'districtCatalog'])->findOrFail($order);
+        $model = $this->visibleQuery($request->user())->with(['campaign', 'branch', 'districtCatalog', 'formSubmission.form.fields', 'formSubmission.files.field'])->findOrFail($order);
 
         return response()->json(['codigo' => 200, 'mensaje' => 'Pedido obtenido.', 'datos' => new OrderResource($model)]);
     }
@@ -149,7 +160,13 @@ class OrderController extends Controller
             return;
         }
 
-        abort_unless($campaign->districts()->whereKey($districtId)->exists(), 422, 'El distrito no pertenece a la campaña.');
+        abort_unless(
+            $campaign->districtLists()
+                ->whereHas('districts', fn ($query) => $query->whereKey($districtId)->where('districts.is_active', true))
+                ->exists(),
+            422,
+            'El distrito no pertenece a la cobertura de la campaña.'
+        );
     }
 
     private function applyCampaignProduct(Campaign $campaign, array &$data): void

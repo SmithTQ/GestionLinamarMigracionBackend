@@ -94,9 +94,15 @@ class UserController extends Controller
 
         DB::transaction(function () use ($model, $data, $roleIds, $campaignIds, $branchIds): void {
             $model->update($data);
-            if ($roleIds !== null) $model->roles()->sync($roleIds);
-            if ($campaignIds !== null) $model->campaigns()->sync($campaignIds);
-            if ($branchIds !== null) $model->branches()->sync($branchIds);
+            if ($roleIds !== null) {
+                $model->roles()->sync($roleIds);
+            }
+            if ($campaignIds !== null) {
+                $model->campaigns()->sync($campaignIds);
+            }
+            if ($branchIds !== null) {
+                $model->branches()->sync($branchIds);
+            }
         });
 
         return response()->json(['codigo' => 200, 'mensaje' => 'Usuario actualizado.', 'datos' => new UserResource($model->fresh(['roles.permissions', 'campaigns', 'branches']))]);
@@ -120,6 +126,7 @@ class UserController extends Controller
     public function roles(): JsonResponse
     {
         $roles = Role::with('permissions')->where('is_active', true)->when(request()->filled('search'), fn ($query) => $query->where(fn ($sub) => $sub->where('name', 'like', '%'.request()->string('search')->toString().'%')->orWhere('slug', 'like', '%'.request()->string('search')->toString().'%')->orWhere('description', 'like', '%'.request()->string('search')->toString().'%')))->tap(fn ($query) => $this->applySorting($query, request(), ['name' => 'name', 'slug' => 'slug', 'created_at' => 'created_at'], 'name'))->get();
+
         return response()->json(['codigo' => 200, 'mensaje' => 'Roles obtenidos.', 'datos' => RoleResource::collection($roles)]);
     }
 
@@ -127,6 +134,7 @@ class UserController extends Controller
     public function permissions(): JsonResponse
     {
         $permissions = Permission::where('is_active', true)->when(request()->filled('search'), fn ($query) => $query->where(fn ($sub) => $sub->where('name', 'like', '%'.request()->string('search')->toString().'%')->orWhere('slug', 'like', '%'.request()->string('search')->toString().'%')))->when(request()->filled('module'), fn ($query) => $query->where('module', request()->string('module')->toString()))->when(request()->filled('action'), fn ($query) => $query->where('action', request()->string('action')->toString()))->tap(fn ($query) => $this->applySorting($query, request(), ['module' => 'module', 'action' => 'action', 'name' => 'name', 'slug' => 'slug'], 'module'))->get();
+
         return response()->json(['codigo' => 200, 'mensaje' => 'Permisos obtenidos.', 'datos' => PermissionResource::collection($permissions)]);
     }
 
@@ -161,7 +169,9 @@ class UserController extends Controller
 
     private function ensureScopesAreVisible(User $actor, array $campaignIds, array $branchIds): void
     {
-        if ($actor->hasRole('super_admin')) return;
+        if ($actor->hasRole('super_admin')) {
+            return;
+        }
 
         $campaignCount = Campaign::whereIn('id', $campaignIds)->whereHas('users', fn (Builder $query) => $query->whereKey($actor->id))->count();
         $branchCount = Branch::whereIn('id', $branchIds)->whereHas('users', fn (Builder $query) => $query->whereKey($actor->id))->count();

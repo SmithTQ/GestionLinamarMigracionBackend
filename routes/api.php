@@ -1,19 +1,22 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Api\V1\Auth\AuthController;
 use App\Http\Controllers\Api\V1\Catalog\BranchController;
 use App\Http\Controllers\Api\V1\Catalog\CampaignController;
 use App\Http\Controllers\Api\V1\Catalog\DistrictController;
+use App\Http\Controllers\Api\V1\Catalog\DistrictListController;
 use App\Http\Controllers\Api\V1\Catalog\ProductCatalogController;
-use App\Http\Controllers\Api\V1\UserController;
-use App\Http\Controllers\Api\V1\Orders\OrderController;
+use App\Http\Controllers\Api\V1\Customers\CustomerInvitationController;
 use App\Http\Controllers\Api\V1\Dispatch\CourierController;
 use App\Http\Controllers\Api\V1\Dispatch\DeliveryRouteController;
-use App\Http\Controllers\Api\V1\Imports\GoogleSheetsImportController;
-use App\Http\Controllers\Api\V1\Auth\AuthController;
 use App\Http\Controllers\Api\V1\Forms\CampaignFormController;
+use App\Http\Controllers\Api\V1\Forms\FormSubmissionFileController;
+use App\Http\Controllers\Api\V1\Forms\FormTemplateController;
 use App\Http\Controllers\Api\V1\Forms\PublicCampaignFormController;
-use App\Http\Controllers\Api\V1\Customers\CustomerInvitationController;
+use App\Http\Controllers\Api\V1\Imports\GoogleSheetsImportController;
+use App\Http\Controllers\Api\V1\Orders\OrderController;
+use App\Http\Controllers\Api\V1\UserController;
+use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function (): void {
     Route::post('/auth/login', [AuthController::class, 'login'])->middleware('throttle:login');
@@ -32,11 +35,19 @@ Route::prefix('v1')->group(function (): void {
         Route::patch('/branches/{branch}', [BranchController::class, 'update'])->middleware('permission:branches.manage');
         Route::delete('/branches/{branch}', [BranchController::class, 'destroy'])->middleware('permission:branches.manage');
 
-        Route::get('/districts', [DistrictController::class, 'index'])->middleware('permission:branches.view');
-        Route::post('/districts', [DistrictController::class, 'store'])->middleware('permission:branches.manage');
-        Route::get('/districts/{district}', [DistrictController::class, 'show'])->middleware('permission:branches.view');
-        Route::patch('/districts/{district}', [DistrictController::class, 'update'])->middleware('permission:branches.manage');
-        Route::delete('/districts/{district}', [DistrictController::class, 'destroy'])->middleware('permission:branches.manage');
+        Route::get('/districts', [DistrictController::class, 'index'])->middleware('permission:districts.view');
+        Route::get('/districts/departments', [DistrictController::class, 'departments'])->middleware('permission:districts.view');
+        Route::get('/districts/provinces', [DistrictController::class, 'provinces'])->middleware('permission:districts.view');
+        Route::post('/districts', [DistrictController::class, 'store'])->middleware('permission:districts.manage');
+        Route::get('/districts/{district}', [DistrictController::class, 'show'])->middleware('permission:districts.view');
+        Route::patch('/districts/{district}', [DistrictController::class, 'update'])->middleware('permission:districts.manage');
+        Route::delete('/districts/{district}', [DistrictController::class, 'destroy'])->middleware('permission:districts.manage');
+
+        Route::get('/district-lists', [DistrictListController::class, 'index'])->middleware('permission:district_lists.view');
+        Route::post('/district-lists', [DistrictListController::class, 'store'])->middleware('permission:district_lists.manage');
+        Route::get('/district-lists/{districtList}', [DistrictListController::class, 'show'])->middleware('permission:district_lists.view');
+        Route::patch('/district-lists/{districtList}', [DistrictListController::class, 'update'])->middleware('permission:district_lists.manage');
+        Route::delete('/district-lists/{districtList}', [DistrictListController::class, 'destroy'])->middleware('permission:district_lists.manage');
 
         Route::get('/product-categories', [ProductCatalogController::class, 'categories'])->middleware('permission:products.view');
         Route::post('/product-categories', [ProductCatalogController::class, 'storeCategory'])->middleware('permission:products.manage');
@@ -53,7 +64,15 @@ Route::prefix('v1')->group(function (): void {
         Route::get('/campaigns/{campaign}/products', [ProductCatalogController::class, 'campaignProducts'])->middleware('permission:campaigns.view');
         Route::put('/campaigns/{campaign}/products', [ProductCatalogController::class, 'assignCampaignProducts'])->middleware('permission:campaigns.manage');
 
-        Route::get('/form-templates', [CampaignFormController::class, 'templates'])->middleware('permission:forms.view');
+        Route::get('/form-templates', [FormTemplateController::class, 'index'])->middleware('permission:forms.view');
+        Route::post('/form-templates', [FormTemplateController::class, 'store'])->middleware('permission:forms.manage');
+        Route::get('/form-templates/{template}', [FormTemplateController::class, 'show'])->middleware('permission:forms.view');
+        Route::patch('/form-templates/{template}', [FormTemplateController::class, 'update'])->middleware('permission:forms.manage');
+        Route::delete('/form-templates/{template}', [FormTemplateController::class, 'destroy'])->middleware('permission:forms.manage');
+        Route::get('/form-templates/{template}/fields', [FormTemplateController::class, 'fields'])->middleware('permission:forms.view');
+        Route::post('/form-templates/{template}/fields', [FormTemplateController::class, 'storeField'])->middleware('permission:forms.manage');
+        Route::patch('/form-templates/{template}/fields/{field}', [FormTemplateController::class, 'updateField'])->middleware('permission:forms.manage');
+        Route::delete('/form-templates/{template}/fields/{field}', [FormTemplateController::class, 'destroyField'])->middleware('permission:forms.manage');
         Route::post('/customer-invitations', [CustomerInvitationController::class, 'store'])->middleware('permission:forms.manage');
         Route::get('/customers', [CustomerInvitationController::class, 'customers'])->middleware('permission:forms.view');
         Route::get('/customers/{customer}', [CustomerInvitationController::class, 'showCustomer'])->middleware('permission:forms.view');
@@ -61,7 +80,11 @@ Route::prefix('v1')->group(function (): void {
         Route::post('/customer-invitations/{invitation}/revoke', [CustomerInvitationController::class, 'revoke'])->middleware('permission:forms.manage');
         Route::get('/campaign-forms', [CampaignFormController::class, 'index'])->middleware('permission:forms.view');
         Route::post('/campaign-forms', [CampaignFormController::class, 'store'])->middleware('permission:forms.manage');
+        Route::put('/campaigns/{campaign}/configuration', [CampaignFormController::class, 'configure'])->middleware(['permission:forms.manage', 'permission:campaigns.manage']);
         Route::get('/campaign-forms/{form}', [CampaignFormController::class, 'show'])->middleware('permission:forms.view');
+        Route::get('/form-submission-files/{file}', [FormSubmissionFileController::class, 'show'])->middleware('permission:orders.view');
+        Route::post('/orders/{order}/files/{file}', [FormSubmissionFileController::class, 'replace'])->middleware('permission:orders.manage');
+        Route::delete('/form-submission-files/{file}', [FormSubmissionFileController::class, 'destroy'])->middleware('permission:orders.manage');
         Route::patch('/campaign-forms/{form}', [CampaignFormController::class, 'update'])->middleware('permission:forms.manage');
         Route::post('/campaign-forms/{form}/publish', [CampaignFormController::class, 'publish'])->middleware('permission:forms.manage');
         Route::post('/campaign-forms/{form}/close', [CampaignFormController::class, 'close'])->middleware('permission:forms.manage');

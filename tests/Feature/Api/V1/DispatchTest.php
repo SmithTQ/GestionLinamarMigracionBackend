@@ -5,7 +5,6 @@ namespace Tests\Feature\Api\V1;
 use App\Models\Branch;
 use App\Models\Campaign;
 use App\Models\Courier;
-use App\Models\DeliveryRoute;
 use App\Models\Order;
 use App\Models\Role;
 use App\Models\User;

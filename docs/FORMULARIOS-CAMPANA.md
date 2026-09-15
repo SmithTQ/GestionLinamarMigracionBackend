@@ -15,6 +15,20 @@ Google Sheets continuará disponible como mecanismo de importación y compatibil
 - Configurar precio, presentación, imagen, orden y disponibilidad del producto.
 - Habilitar u ocultar campos permitidos por la plantilla.
 - Marcar campos como obligatorios u opcionales.
+
+El endpoint `GET /api/v1/campaigns` incluye un resumen del formulario asociado para evitar consultas individuales desde el frontend:
+
+```json
+{
+  "id": 12,
+  "code": "CAMP-001",
+  "name": "Campaña ejemplo",
+  "form_status": "published",
+  "has_published_form": true
+}
+```
+
+`form_status` puede ser `published`, `draft`, `closed` o `null`. Si existen varios formularios, se aplica la prioridad `published > draft > closed`.
 - Configurar el catálogo de distritos habilitados para despacho.
 - Seleccionar la ubicación de entrega en un mapa.
 - Guardar latitud, longitud y dirección resultante.
@@ -53,7 +67,7 @@ Se prevén estas entidades:
 | `products` | Catálogo general de productos |
 | `campaign_products` | Productos, precio y disponibilidad por campaña |
 | `districts` | Catálogo de distritos habilitables |
-| `campaign_district` | Distritos permitidos por campaña y sucursal |
+| `district_lists` | Listados de cobertura reutilizables relacionados con la campaña |
 | `form_submissions` | Registro de envíos públicos e idempotencia |
 
 Los pedidos conservarán la información operativa resultante del formulario y una referencia al envío original, sin depender de que el formulario siga publicado.

@@ -45,12 +45,15 @@ class GoogleSheetsImportController extends Controller
     {
         $model = Import::with(['campaign', 'branch'])->findOrFail($import);
         $this->ensureScope($request->user(), $model->campaign, $model->branch);
+
         return response()->json(['codigo' => 200, 'mensaje' => 'Importación obtenida.', 'datos' => new ImportResource($model)]);
     }
 
     private function ensureScope(User $actor, Campaign $campaign, Branch $branch): void
     {
         abort_unless($campaign->branches()->whereKey($branch->id)->exists(), 422, 'La sucursal no pertenece a la campaña.');
-        if (! $actor->hasRole('super_admin')) abort_unless($campaign->users()->whereKey($actor->id)->exists() && $branch->users()->whereKey($actor->id)->exists(), 403, 'La importación está fuera de tu ámbito.');
+        if (! $actor->hasRole('super_admin')) {
+            abort_unless($campaign->users()->whereKey($actor->id)->exists() && $branch->users()->whereKey($actor->id)->exists(), 403, 'La importación está fuera de tu ámbito.');
+        }
     }
 }

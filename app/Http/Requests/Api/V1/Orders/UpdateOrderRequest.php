@@ -2,11 +2,22 @@
 
 namespace App\Http\Requests\Api\V1\Orders;
 
+use App\Http\Requests\NormalizesDeliveryDate;
 use Illuminate\Foundation\Http\FormRequest;
 
 class UpdateOrderRequest extends FormRequest
 {
-    public function authorize(): bool { return true; }
+    use NormalizesDeliveryDate;
+
+    public function authorize(): bool
+    {
+        return true;
+    }
+
+    protected function prepareForValidation(): void
+    {
+        $this->prepareDeliveryDateForValidation();
+    }
 
     public function rules(): array
     {
@@ -20,8 +31,8 @@ class UpdateOrderRequest extends FormRequest
             'longitude' => ['nullable', 'numeric', 'between:-180,180', 'required_with:latitude'],
             'location_accuracy' => ['nullable', 'numeric', 'min:0', 'max:100000'],
             'dedication' => ['nullable', 'string', 'max:5000'],
-            'delivery_date' => ['nullable', 'date'],
-            'delivery_time' => ['nullable', 'date_format:H:i'],
+            'delivery_date' => ['nullable', 'date_format:Y-m-d'],
+            'delivery_time' => ['nullable', 'string', 'max:255'],
         ];
     }
 }

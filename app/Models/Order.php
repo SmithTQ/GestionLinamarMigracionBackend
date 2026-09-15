@@ -4,6 +4,9 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Order extends Model
@@ -26,7 +29,6 @@ class Order extends Model
     {
         return [
             'delivery_date' => 'date',
-            'delivery_time' => 'datetime:H:i',
             'imported_at' => 'datetime',
             'is_active' => 'boolean',
             'latitude' => 'decimal:7',
@@ -36,33 +38,38 @@ class Order extends Model
         ];
     }
 
-    public function campaign()
+    public function campaign(): BelongsTo
     {
         return $this->belongsTo(Campaign::class);
     }
 
-    public function branch()
+    public function branch(): BelongsTo
     {
         return $this->belongsTo(Branch::class);
     }
 
-    public function product()
+    public function product(): BelongsTo
     {
         return $this->belongsTo(Product::class);
     }
 
-    public function customer()
+    public function customer(): BelongsTo
     {
         return $this->belongsTo(Customer::class);
     }
 
-    public function routes()
+    public function routes(): BelongsToMany
     {
         return $this->belongsToMany(DeliveryRoute::class, 'route_order', 'order_id', 'route_id')->withPivot(['position', 'is_active', 'assigned_at', 'removed_at'])->withTimestamps();
     }
 
-    public function districtCatalog()
+    public function districtCatalog(): BelongsTo
     {
         return $this->belongsTo(District::class, 'district_id');
+    }
+
+    public function formSubmission(): HasOne
+    {
+        return $this->hasOne(FormSubmission::class);
     }
 }

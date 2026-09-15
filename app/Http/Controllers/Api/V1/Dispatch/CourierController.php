@@ -45,6 +45,7 @@ class CourierController extends Controller
         $courier = DB::transaction(function () use ($data, $branchIds): Courier {
             $courier = Courier::create($data);
             $courier->branches()->sync($branchIds);
+
             return $courier;
         });
 
@@ -58,11 +59,15 @@ class CourierController extends Controller
         $data = $request->validated();
         $branchIds = $data['branch_ids'] ?? null;
         unset($data['branch_ids']);
-        if ($branchIds !== null) $this->ensureBranchesVisible($request, $branchIds);
+        if ($branchIds !== null) {
+            $this->ensureBranchesVisible($request, $branchIds);
+        }
 
         DB::transaction(function () use ($model, $data, $branchIds): void {
             $model->update($data);
-            if ($branchIds !== null) $model->branches()->sync($branchIds);
+            if ($branchIds !== null) {
+                $model->branches()->sync($branchIds);
+            }
         });
 
         return response()->json(['codigo' => 200, 'mensaje' => 'Motorizado actualizado.', 'datos' => new CourierResource($model->fresh('branches'))]);
@@ -70,7 +75,9 @@ class CourierController extends Controller
 
     private function ensureBranchesVisible(Request $request, array $branchIds): void
     {
-        if ($request->user()->hasRole('super_admin') || $branchIds === []) return;
+        if ($request->user()->hasRole('super_admin') || $branchIds === []) {
+            return;
+        }
         $count = Branch::whereIn('id', $branchIds)->whereHas('users', fn ($query) => $query->whereKey($request->user()->id))->count();
         abort_if($count !== count(array_unique($branchIds)), 403, 'Una sucursal está fuera de tu ámbito.');
     }

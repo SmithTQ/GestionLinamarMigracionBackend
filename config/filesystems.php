@@ -2,6 +2,8 @@
 
 return [
 
+    'product_disk' => env('PRODUCT_IMAGE_DISK', 'public'),
+
     /*
     |--------------------------------------------------------------------------
     | Default Filesystem Disk
