@@ -24,6 +24,16 @@ Requieren `products.view` para consultar y `products.manage` para administrar:
 - `PATCH /api/v1/products/{product}`
 - `DELETE /api/v1/products/{product}`
 
+## Creación y actualización de productos
+
+Los campos `sku` y `slug` son opcionales al crear un producto. Si no se envían, el backend genera el SKU y el slug automáticamente. El SKU no se modifica mediante la actualización normal; el slug se conserva cuando cambia el nombre y no se envía un slug nuevo.
+
+La creación y actualización aceptan `multipart/form-data` con un campo `image` opcional. Se permiten JPG, JPEG, PNG y WebP, con un máximo de 5 MB y dimensiones entre 100 y 4000 píxeles. La imagen original y un thumbnail WebP de hasta 480 px se almacenan en el disco configurado por `PRODUCT_IMAGE_DISK`. La respuesta devuelve `image_url` e `image_thumbnail_url`.
+
+Para actualizar un producto con archivo desde PHP, se recomienda enviar `POST /api/v1/products/{product}` con `_method=PATCH` dentro del multipart, ya que PHP no procesa multipart de forma uniforme en peticiones PATCH directas.
+
+Las imágenes anteriores se eliminan al reemplazarlas cuando fueron gestionadas por el backend. Al desactivar un producto, la imagen se conserva.
+
 ## Productos por campaña
 
 Consultar los productos disponibles:

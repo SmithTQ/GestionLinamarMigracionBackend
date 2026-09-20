@@ -23,13 +23,16 @@ class GoogleSheetsImporter
 
             foreach ($rows as $index => $row) {
                 $rowNumber = $index + 2;
-                if ($this->isEmptyRow($row)) continue;
+                if ($this->isEmptyRow($row)) {
+                    continue;
+                }
 
                 try {
                     $data = $this->mapRow($row, $rowNumber, $import);
                     if ($data === null) {
                         $invalid++;
                         $errors[] = ['row' => $rowNumber, 'message' => 'Faltan campos obligatorios.'];
+
                         continue;
                     }
 
@@ -41,6 +44,7 @@ class GoogleSheetsImporter
 
                     if ($exists) {
                         $duplicated++;
+
                         continue;
                     }
 
@@ -48,7 +52,9 @@ class GoogleSheetsImporter
                     $inserted++;
                 } catch (\Throwable $exception) {
                     $failed++;
-                    if (count($errors) < 100) $errors[] = ['row' => $rowNumber, 'message' => 'No se pudo procesar la fila.'];
+                    if (count($errors) < 100) {
+                        $errors[] = ['row' => $rowNumber, 'message' => 'No se pudo procesar la fila.'];
+                    }
                 }
             }
 
@@ -68,9 +74,11 @@ class GoogleSheetsImporter
     private function readRows(string $spreadsheetId, string $range): array
     {
         $credentials = config('services.google_sheets.credentials');
-        if (! $credentials || ! is_file($credentials)) throw new RuntimeException('La credencial de Google no está configurada.');
+        if (! $credentials || ! is_file($credentials)) {
+            throw new RuntimeException('La credencial de Google no está configurada.');
+        }
 
-        $client = new GoogleClient();
+        $client = new GoogleClient;
         $client->setAuthConfig($credentials);
         $client->setScopes([Sheets::SPREADSHEETS_READONLY]);
         $client->setApplicationName(config('app.name'));
@@ -82,7 +90,11 @@ class GoogleSheetsImporter
     private function mapRow(array $row, int $rowNumber, Import $import): ?array
     {
         $required = [0, 2, 3, 4, 5, 6, 7, 8];
-        foreach ($required as $index) if (! isset($row[$index]) || trim((string) $row[$index]) === '') return null;
+        foreach ($required as $index) {
+            if (! isset($row[$index]) || trim((string) $row[$index]) === '') {
+                return null;
+            }
+        }
 
         return [
             'campaign_id' => $import->campaign_id, 'branch_id' => $import->branch_id,
@@ -107,7 +119,12 @@ class GoogleSheetsImporter
 
     private function isEmptyRow(array $row): bool
     {
-        foreach ($row as $value) if (trim((string) $value) !== '') return false;
+        foreach ($row as $value) {
+            if (trim((string) $value) !== '') {
+                return false;
+            }
+        }
+
         return true;
     }
 }

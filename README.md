@@ -9,6 +9,12 @@
 
 ## About Laravel
 
+## Proyecto
+
+Backend de Gestion de Pedidos Linamar basado en Laravel 13. La guia de despliegue para Hostinger se encuentra en [docs/DEPLOY-HOSTINGER.md](docs/DEPLOY-HOSTINGER.md).
+
+Para desarrollo local se utiliza Docker Compose. En Hostinger Business Web Hosting se despliega como aplicacion PHP tradicional; no se ejecuta Docker en el hosting compartido.
+
 Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
 
 - [Simple, fast routing engine](https://laravel.com/docs/routing).

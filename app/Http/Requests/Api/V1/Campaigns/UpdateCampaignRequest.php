@@ -7,20 +7,23 @@ use Illuminate\Validation\Rule;
 
 class UpdateCampaignRequest extends FormRequest
 {
-    public function authorize(): bool { return true; }
+    public function authorize(): bool
+    {
+        return true;
+    }
 
     public function rules(): array
     {
         return [
             'code' => ['sometimes', 'required', 'string', 'max:40', 'alpha_dash', Rule::unique('campaigns', 'code')->ignore($this->route('campaign'))],
             'name' => ['sometimes', 'required', 'string', 'max:150'],
+            'budget' => ['sometimes', 'nullable', 'numeric', 'min:0', 'max:9999999999.99'],
+            'branch_id' => ['sometimes', 'required', 'integer', 'exists:branches,id'],
             'status' => ['sometimes', Rule::in(['draft', 'open', 'closed', 'cancelled'])],
             'starts_on' => ['nullable', 'date'],
             'ends_on' => ['nullable', 'date', 'after_or_equal:starts_on'],
-            'branch_ids' => ['sometimes', 'array'],
-            'branch_ids.*' => ['integer', 'distinct', 'exists:branches,id'],
-            'district_ids' => ['sometimes', 'array'],
-            'district_ids.*' => ['integer', 'distinct', 'exists:districts,id'],
+            'district_list_ids' => ['sometimes', 'array'],
+            'district_list_ids.*' => ['integer', 'distinct', 'exists:district_lists,id'],
         ];
     }
 }

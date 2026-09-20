@@ -22,6 +22,13 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        if (app()->environment('testing') && (
+            config('database.default') !== 'sqlite'
+            || config('database.connections.sqlite.database') !== ':memory:'
+        )) {
+            throw new \LogicException('Las pruebas solo pueden ejecutarse con SQLite en memoria.');
+        }
+
         RateLimiter::for('login', function (Request $request): Limit {
             $login = strtolower(trim((string) $request->input('login')));
 
@@ -29,6 +36,9 @@ class AppServiceProvider extends ServiceProvider
         });
         RateLimiter::for('public-form', function (Request $request): Limit {
             return Limit::perMinute(20)->by($request->route('publicKey').'|'.$request->ip());
+        });
+        RateLimiter::for('public-route', function (Request $request): Limit {
+            return Limit::perMinute(30)->by($request->route('token').'|'.$request->ip());
         });
     }
 }

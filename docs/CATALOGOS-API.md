@@ -24,7 +24,9 @@ La eliminación es lógica. Los usuarios que no son `super_admin` solo pueden co
 | `PATCH` | `/api/v1/campaigns/{campaign}` | `campaigns.manage` |
 | `DELETE` | `/api/v1/campaigns/{campaign}` | `campaigns.manage` |
 
-Una campaña puede recibir `branch_ids` al crearla o actualizarla. La API valida que las sucursales existan y que estén dentro del ámbito del usuario, salvo para `super_admin`.
+Cada campaña tiene exactamente una sucursal. Al crearla se requiere `branch_id`; al actualizarla puede enviarse `branch_id` para cambiarla. La API valida que la sucursal exista y esté dentro del ámbito del usuario, salvo para `super_admin`.
+
+Las respuestas incluyen `branch` con `id`, `code`, `name`, `address`, `latitude` y `longitude`. Los listados cargan la relación sin consultas N+1.
 
 Estados válidos: `draft`, `open`, `closed` y `cancelled`.
 

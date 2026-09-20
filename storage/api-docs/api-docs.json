@@ -168,6 +168,20 @@
                 }
             }
         },
+        "/api/v1/campaigns/available": {
+            "get": {
+                "tags": [
+                    "CampaÃ±as"
+                ],
+                "summary": "Listar campaÃ±as disponibles para el usuario",
+                "operationId": "listAvailableCampaigns",
+                "responses": {
+                    "200": {
+                        "description": "CampaÃ±as disponibles"
+                    }
+                }
+            }
+        },
         "/api/v1/campaigns": {
             "get": {
                 "tags": [
@@ -187,6 +201,59 @@
                 ],
                 "summary": "Crear campaña",
                 "operationId": "createCampaign",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "code",
+                                    "name",
+                                    "branch_id"
+                                ],
+                                "properties": {
+                                    "code": {
+                                        "type": "string",
+                                        "example": "CAMPANA_ENERO"
+                                    },
+                                    "name": {
+                                        "type": "string",
+                                        "example": "Pedidos de enero"
+                                    },
+                                    "status": {
+                                        "type": "string",
+                                        "example": "draft"
+                                    },
+                                    "starts_on": {
+                                        "type": "string",
+                                        "format": "date",
+                                        "nullable": true
+                                    },
+                                    "ends_on": {
+                                        "type": "string",
+                                        "format": "date",
+                                        "nullable": true
+                                    },
+                                    "branch_id": {
+                                        "type": "integer",
+                                        "example": 1
+                                    },
+                                    "district_list_ids": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "integer"
+                                        },
+                                        "example": [
+                                            4,
+                                            5
+                                        ]
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
                 "responses": {
                     "201": {
                         "description": "Campaña creada"
@@ -225,9 +292,144 @@
                 ],
                 "summary": "Actualizar campaña",
                 "operationId": "updateCampaign",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "code": {
+                                        "type": "string"
+                                    },
+                                    "name": {
+                                        "type": "string"
+                                    },
+                                    "status": {
+                                        "type": "string"
+                                    },
+                                    "starts_on": {
+                                        "type": "string",
+                                        "format": "date",
+                                        "nullable": true
+                                    },
+                                    "ends_on": {
+                                        "type": "string",
+                                        "format": "date",
+                                        "nullable": true
+                                    },
+                                    "branch_id": {
+                                        "type": "integer"
+                                    },
+                                    "district_list_ids": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "integer"
+                                        }
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
                 "responses": {
                     "200": {
                         "description": "Campaña actualizada"
+                    }
+                }
+            }
+        },
+        "/api/v1/campaigns/{campaign}/available-dispatchers": {
+            "get": {
+                "tags": [
+                    "Usuarios de campaña"
+                ],
+                "summary": "Listar despachadores disponibles para la campaña",
+                "operationId": "listAvailableCampaignDispatchers",
+                "responses": {
+                    "200": {
+                        "description": "Despachadores disponibles"
+                    }
+                }
+            }
+        },
+        "/api/v1/campaigns/{campaign}/users": {
+            "get": {
+                "tags": [
+                    "Usuarios de campaÃ±a"
+                ],
+                "summary": "Listar usuarios asignados a una campaÃ±a",
+                "operationId": "listCampaignUsers",
+                "responses": {
+                    "200": {
+                        "description": "Usuarios obtenidos"
+                    }
+                }
+            },
+            "post": {
+                "tags": [
+                    "Usuarios de campaÃ±a"
+                ],
+                "summary": "Asignar usuario a una campaÃ±a",
+                "operationId": "assignCampaignUser",
+                "responses": {
+                    "201": {
+                        "description": "Usuario asignado"
+                    },
+                    "409": {
+                        "description": "AsignaciÃ³n duplicada"
+                    }
+                }
+            }
+        },
+        "/api/v1/campaigns/{campaign}/users/{user}": {
+            "delete": {
+                "tags": [
+                    "Usuarios de campaÃ±a"
+                ],
+                "summary": "Desactivar usuario de una campaÃ±a",
+                "operationId": "removeCampaignUser",
+                "responses": {
+                    "200": {
+                        "description": "AsignaciÃ³n desactivada"
+                    }
+                }
+            }
+        },
+        "/api/v1/districts/departments": {
+            "get": {
+                "tags": [
+                    "Distritos"
+                ],
+                "summary": "Listar departamentos",
+                "operationId": "listDistrictDepartments",
+                "responses": {
+                    "200": {
+                        "description": "Departamentos obtenidos"
+                    }
+                }
+            }
+        },
+        "/api/v1/districts/provinces": {
+            "get": {
+                "tags": [
+                    "Distritos"
+                ],
+                "summary": "Listar provincias por departamento",
+                "operationId": "listDistrictProvinces",
+                "parameters": [
+                    {
+                        "name": "department_code",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "example": "15"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Provincias obtenidas"
                     }
                 }
             }
@@ -292,6 +494,70 @@
                 "responses": {
                     "200": {
                         "description": "Distrito actualizado"
+                    }
+                }
+            }
+        },
+        "/api/v1/district-lists": {
+            "get": {
+                "tags": [
+                    "Plantillas de distritos"
+                ],
+                "summary": "Listar plantillas de distritos",
+                "operationId": "listDistrictLists",
+                "responses": {
+                    "200": {
+                        "description": "Plantillas obtenidas"
+                    }
+                }
+            },
+            "post": {
+                "tags": [
+                    "Plantillas de distritos"
+                ],
+                "summary": "Crear plantilla de distritos",
+                "operationId": "createDistrictList",
+                "responses": {
+                    "201": {
+                        "description": "Plantilla creada"
+                    }
+                }
+            }
+        },
+        "/api/v1/district-lists/{districtList}": {
+            "get": {
+                "tags": [
+                    "Plantillas de distritos"
+                ],
+                "summary": "Consultar plantilla de distritos",
+                "operationId": "showDistrictList",
+                "responses": {
+                    "200": {
+                        "description": "Plantilla obtenida"
+                    }
+                }
+            },
+            "delete": {
+                "tags": [
+                    "Plantillas de distritos"
+                ],
+                "summary": "Desactivar plantilla de distritos",
+                "operationId": "archiveDistrictList",
+                "responses": {
+                    "200": {
+                        "description": "Plantilla desactivada"
+                    }
+                }
+            },
+            "patch": {
+                "tags": [
+                    "Plantillas de distritos"
+                ],
+                "summary": "Actualizar plantilla de distritos",
+                "operationId": "updateDistrictList",
+                "responses": {
+                    "200": {
+                        "description": "Plantilla actualizada"
                     }
                 }
             }
@@ -419,6 +685,67 @@
                 ],
                 "summary": "Crear producto",
                 "operationId": "createProduct",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "multipart/form-data": {
+                            "schema": {
+                                "required": [
+                                    "name"
+                                ],
+                                "properties": {
+                                    "name": {
+                                        "type": "string",
+                                        "example": "Caja de rosas"
+                                    },
+                                    "branch_id": {
+                                        "type": "integer",
+                                        "example": 2
+                                    },
+                                    "subcategory_id": {
+                                        "type": "integer",
+                                        "example": 1,
+                                        "nullable": true
+                                    },
+                                    "sku": {
+                                        "type": "string",
+                                        "example": "PROD-000001",
+                                        "nullable": true
+                                    },
+                                    "slug": {
+                                        "type": "string",
+                                        "example": "caja-de-rosas",
+                                        "nullable": true
+                                    },
+                                    "description": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "unit": {
+                                        "type": "string",
+                                        "example": "unidad"
+                                    },
+                                    "base_price": {
+                                        "type": "number",
+                                        "format": "float",
+                                        "example": 59.9,
+                                        "nullable": true
+                                    },
+                                    "sort_order": {
+                                        "type": "integer",
+                                        "example": 0
+                                    },
+                                    "image": {
+                                        "type": "string",
+                                        "format": "binary",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
                 "responses": {
                     "201": {
                         "description": "Producto creado"
@@ -445,6 +772,51 @@
                 ],
                 "summary": "Actualizar producto",
                 "operationId": "updateProduct",
+                "requestBody": {
+                    "content": {
+                        "multipart/form-data": {
+                            "schema": {
+                                "properties": {
+                                    "name": {
+                                        "type": "string"
+                                    },
+                                    "subcategory_id": {
+                                        "type": "integer",
+                                        "nullable": true
+                                    },
+                                    "slug": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "description": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "unit": {
+                                        "type": "string"
+                                    },
+                                    "base_price": {
+                                        "type": "number",
+                                        "format": "float",
+                                        "nullable": true
+                                    },
+                                    "sort_order": {
+                                        "type": "integer"
+                                    },
+                                    "is_active": {
+                                        "type": "boolean"
+                                    },
+                                    "image": {
+                                        "type": "string",
+                                        "format": "binary",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
                 "responses": {
                     "200": {
                         "description": "Producto actualizado"
@@ -586,6 +958,165 @@
                 }
             }
         },
+        "/api/v1/routes/{route}/access-token": {
+            "post": {
+                "tags": [
+                    "Rutas"
+                ],
+                "summary": "Crear enlace público seguro para una ruta",
+                "operationId": "createRouteAccessToken",
+                "responses": {
+                    "201": {
+                        "description": "Enlace creado"
+                    }
+                }
+            },
+            "delete": {
+                "tags": [
+                    "Rutas"
+                ],
+                "summary": "Revocar enlace público de una ruta",
+                "operationId": "revokeRouteAccessToken",
+                "responses": {
+                    "200": {
+                        "description": "Enlace revocado"
+                    }
+                }
+            }
+        },
+        "/api/v1/routes/{route}/courier-invitations": {
+            "post": {
+                "tags": [
+                    "Rutas"
+                ],
+                "summary": "Asignar motorizado y generar invitación pública de ruta",
+                "operationId": "createCourierRouteInvitation",
+                "responses": {
+                    "201": {
+                        "description": "Motorizado asignado e invitación generada"
+                    }
+                }
+            }
+        },
+        "/api/v1/routes/eligible-orders": {
+            "get": {
+                "tags": [
+                    "Rutas"
+                ],
+                "summary": "Listar pedidos elegibles para enrutar",
+                "operationId": "listEligibleRouteOrders",
+                "responses": {
+                    "200": {
+                        "description": "Pedidos elegibles obtenidos"
+                    }
+                }
+            }
+        },
+        "/api/v1/routes/map-orders": {
+            "get": {
+                "tags": [
+                    "Rutas"
+                ],
+                "summary": "Listar pedidos ubicables para el mapa de rutas",
+                "operationId": "listMapRouteOrders",
+                "parameters": [
+                    {
+                        "name": "campaign_id",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    },
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1,
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "example": 20,
+                            "maximum": 100,
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "name": "search",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "example": "Maria"
+                        }
+                    },
+                    {
+                        "name": "delivery_date",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date",
+                            "example": "2026-09-20"
+                        }
+                    },
+                    {
+                        "name": "district_id",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "example": 15
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Pedidos ubicables y resumen del mapa obtenidos"
+                    }
+                }
+            }
+        },
+        "/api/v1/routes/generate": {
+            "post": {
+                "tags": [
+                    "Rutas"
+                ],
+                "summary": "Generar ruta desde pedidos seleccionados",
+                "operationId": "generateRoute",
+                "responses": {
+                    "201": {
+                        "description": "Ruta generada"
+                    },
+                    "200": {
+                        "description": "Solicitud ya procesada"
+                    }
+                }
+            }
+        },
+        "/api/v1/routes/{route}/stops": {
+            "put": {
+                "tags": [
+                    "Rutas"
+                ],
+                "summary": "Modificar paradas de una ruta",
+                "operationId": "updateRouteStops",
+                "responses": {
+                    "200": {
+                        "description": "Paradas actualizadas"
+                    }
+                }
+            }
+        },
         "/api/v1/routes": {
             "get": {
                 "tags": [
@@ -680,16 +1211,30 @@
                 }
             }
         },
-        "/api/v1/form-templates": {
+        "/api/v1/public/routes/{token}": {
             "get": {
                 "tags": [
-                    "Formularios"
+                    "Public routes"
                 ],
-                "summary": "Listar plantillas",
-                "operationId": "listFormTemplates",
+                "summary": "Consultar ruta mediante token seguro",
+                "operationId": "showPublicRoute",
                 "responses": {
                     "200": {
-                        "description": "Plantillas obtenidas"
+                        "description": "Ruta publica obtenida"
+                    }
+                }
+            }
+        },
+        "/api/v1/public/routes/{token}/orders/{order}/delivery-confirmation": {
+            "post": {
+                "tags": [
+                    "Public routes"
+                ],
+                "summary": "Confirmar entrega con evidencia",
+                "operationId": "confirmPublicDelivery",
+                "responses": {
+                    "200": {
+                        "description": "Entrega confirmada"
                     }
                 }
             }
@@ -716,6 +1261,20 @@
                 "responses": {
                     "201": {
                         "description": "Formulario creado"
+                    }
+                }
+            }
+        },
+        "/api/v1/campaigns/{campaign}/configuration": {
+            "put": {
+                "tags": [
+                    "Formularios"
+                ],
+                "summary": "Guardar formulario y productos de campaña de forma atómica",
+                "operationId": "configureCampaignFormAndProducts",
+                "responses": {
+                    "200": {
+                        "description": "Configuración guardada"
                     }
                 }
             }
@@ -770,6 +1329,122 @@
                 "responses": {
                     "200": {
                         "description": "Formulario cerrado"
+                    }
+                }
+            }
+        },
+        "/api/v1/form-templates": {
+            "get": {
+                "tags": [
+                    "Formularios"
+                ],
+                "summary": "Listar plantillas",
+                "operationId": "listFormTemplates",
+                "responses": {
+                    "200": {
+                        "description": "Plantillas obtenidas"
+                    }
+                }
+            },
+            "post": {
+                "tags": [
+                    "Formularios"
+                ],
+                "summary": "Crear plantilla",
+                "operationId": "createFormTemplate",
+                "responses": {
+                    "201": {
+                        "description": "Plantilla creada"
+                    }
+                }
+            }
+        },
+        "/api/v1/form-templates/{template}": {
+            "get": {
+                "tags": [
+                    "Formularios"
+                ],
+                "summary": "Consultar plantilla",
+                "operationId": "showFormTemplate",
+                "responses": {
+                    "200": {
+                        "description": "Plantilla obtenida"
+                    }
+                }
+            },
+            "delete": {
+                "tags": [
+                    "Formularios"
+                ],
+                "summary": "Desactivar plantilla",
+                "operationId": "deactivateFormTemplate",
+                "responses": {
+                    "200": {
+                        "description": "Plantilla desactivada"
+                    }
+                }
+            },
+            "patch": {
+                "tags": [
+                    "Formularios"
+                ],
+                "summary": "Actualizar plantilla",
+                "operationId": "updateFormTemplate",
+                "responses": {
+                    "200": {
+                        "description": "Plantilla actualizada"
+                    }
+                }
+            }
+        },
+        "/api/v1/form-templates/{template}/fields": {
+            "get": {
+                "tags": [
+                    "Formularios"
+                ],
+                "summary": "Listar campos de plantilla",
+                "operationId": "listFormTemplateFields",
+                "responses": {
+                    "200": {
+                        "description": "Campos obtenidos"
+                    }
+                }
+            },
+            "post": {
+                "tags": [
+                    "Formularios"
+                ],
+                "summary": "Crear campo de plantilla",
+                "operationId": "createFormTemplateField",
+                "responses": {
+                    "201": {
+                        "description": "Campo creado"
+                    }
+                }
+            }
+        },
+        "/api/v1/form-templates/{template}/fields/{field}": {
+            "delete": {
+                "tags": [
+                    "Formularios"
+                ],
+                "summary": "Desactivar campo de plantilla",
+                "operationId": "deactivateFormTemplateField",
+                "responses": {
+                    "200": {
+                        "description": "Campo desactivado"
+                    }
+                }
+            },
+            "patch": {
+                "tags": [
+                    "Formularios"
+                ],
+                "summary": "Actualizar campo de plantilla",
+                "operationId": "updateFormTemplateField",
+                "responses": {
+                    "200": {
+                        "description": "Campo actualizado"
                     }
                 }
             }
@@ -829,6 +1504,20 @@
                     },
                     "200": {
                         "description": "Envío duplicado"
+                    }
+                }
+            }
+        },
+        "/api/v1/internal/forms/{publicKey}/submissions": {
+            "post": {
+                "tags": [
+                    "Formularios internos"
+                ],
+                "summary": "Registrar pedido interno desde un formulario",
+                "operationId": "submitInternalCampaignForm",
+                "responses": {
+                    "201": {
+                        "description": "Pedido creado"
                     }
                 }
             }
@@ -927,6 +1616,23 @@
                 "responses": {
                     "200": {
                         "description": "Pedido actualizado"
+                    }
+                }
+            }
+        },
+        "/api/v1/orders/{order}/delivery-evidence": {
+            "get": {
+                "tags": [
+                    "Pedidos"
+                ],
+                "summary": "Descargar evidencia de entrega",
+                "operationId": "showOrderDeliveryEvidence",
+                "responses": {
+                    "200": {
+                        "description": "Evidencia descargada"
+                    },
+                    "404": {
+                        "description": "Evidencia no encontrada"
                     }
                 }
             }
@@ -1039,6 +1745,56 @@
         }
     },
     "components": {
+        "schemas": {
+            "CampaignResource": {
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "code": {
+                        "type": "string",
+                        "example": "CAMP-001"
+                    },
+                    "name": {
+                        "type": "string",
+                        "example": "Campaña de ejemplo"
+                    },
+                    "budget": {
+                        "type": "string",
+                        "example": "2500.00",
+                        "nullable": true
+                    },
+                    "orders_count": {
+                        "type": "integer",
+                        "example": 12
+                    },
+                    "delivered_count": {
+                        "type": "integer",
+                        "example": 8
+                    },
+                    "total_obtained": {
+                        "type": "string",
+                        "example": "1250.00",
+                        "nullable": true
+                    },
+                    "status": {
+                        "type": "string",
+                        "example": "open"
+                    },
+                    "form_status": {
+                        "type": "string",
+                        "example": "published",
+                        "nullable": true
+                    },
+                    "has_published_form": {
+                        "type": "boolean",
+                        "example": true
+                    }
+                },
+                "type": "object"
+            }
+        },
         "securitySchemes": {
             "sanctum": {
                 "type": "http",
@@ -1058,8 +1814,16 @@
             "description": "Campañas y su ámbito de sucursales"
         },
         {
+            "name": "Usuarios de campaÃ±a",
+            "description": "AsignaciÃ³n de usuarios a campaÃ±as"
+        },
+        {
             "name": "Distritos",
             "description": "Catálogo de distritos y zonas de entrega"
+        },
+        {
+            "name": "Plantillas de distritos",
+            "description": "Listas reutilizables de distritos para formularios"
         },
         {
             "name": "Productos",
@@ -1079,7 +1843,7 @@
         },
         {
             "name": "Formularios",
-            "description": "Formularios configurables por campaña"
+            "description": "Administración de plantillas y campos"
         },
         {
             "name": "Formularios públicos",
@@ -1100,6 +1864,22 @@
         {
             "name": "Autenticación",
             "description": "Autenticación"
+        },
+        {
+            "name": "CampaÃ±as",
+            "description": "CampaÃ±as"
+        },
+        {
+            "name": "Usuarios de campaña",
+            "description": "Usuarios de campaña"
+        },
+        {
+            "name": "Public routes",
+            "description": "Public routes"
+        },
+        {
+            "name": "Formularios internos",
+            "description": "Formularios internos"
         }
     ],
     "security": [

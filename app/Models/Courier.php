@@ -4,6 +4,8 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Courier extends Model
@@ -17,12 +19,12 @@ class Courier extends Model
         return ['is_available' => 'boolean', 'is_active' => 'boolean'];
     }
 
-    public function branches()
+    public function branches(): BelongsToMany
     {
         return $this->belongsToMany(Branch::class);
     }
 
-    public function routes()
+    public function routes(): HasMany
     {
         return $this->hasMany(DeliveryRoute::class);
     }

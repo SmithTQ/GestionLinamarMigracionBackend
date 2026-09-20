@@ -6,8 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\Couriers\StoreCourierRequest;
 use App\Http\Requests\Api\V1\Couriers\UpdateCourierRequest;
 use App\Http\Resources\Api\V1\Dispatch\CourierResource;
-use App\Models\Branch;
 use App\Models\Courier;
+use App\Services\Authorization\OperationalScopeService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -21,7 +21,7 @@ class CourierController extends Controller
     {
         $query = Courier::query()->with('branches')->where('is_active', true);
         if (! $request->user()->hasRole('super_admin')) {
-            $query->whereHas('branches.users', fn ($relation) => $relation->whereKey($request->user()->id));
+            $query->whereHas('branches', fn ($relation) => $relation->whereIn('branches.id', app(OperationalScopeService::class)->visibleBranches($request->user())->select('branches.id')));
         }
 
         $query->when($request->filled('search'), fn ($builder) => $builder->where(function ($subQuery) use ($request): void {
@@ -45,6 +45,7 @@ class CourierController extends Controller
         $courier = DB::transaction(function () use ($data, $branchIds): Courier {
             $courier = Courier::create($data);
             $courier->branches()->sync($branchIds);
+
             return $courier;
         });
 
@@ -58,11 +59,15 @@ class CourierController extends Controller
         $data = $request->validated();
         $branchIds = $data['branch_ids'] ?? null;
         unset($data['branch_ids']);
-        if ($branchIds !== null) $this->ensureBranchesVisible($request, $branchIds);
+        if ($branchIds !== null) {
+            $this->ensureBranchesVisible($request, $branchIds);
+        }
 
         DB::transaction(function () use ($model, $data, $branchIds): void {
             $model->update($data);
-            if ($branchIds !== null) $model->branches()->sync($branchIds);
+            if ($branchIds !== null) {
+                $model->branches()->sync($branchIds);
+            }
         });
 
         return response()->json(['codigo' => 200, 'mensaje' => 'Motorizado actualizado.', 'datos' => new CourierResource($model->fresh('branches'))]);
@@ -70,8 +75,10 @@ class CourierController extends Controller
 
     private function ensureBranchesVisible(Request $request, array $branchIds): void
     {
-        if ($request->user()->hasRole('super_admin') || $branchIds === []) return;
-        $count = Branch::whereIn('id', $branchIds)->whereHas('users', fn ($query) => $query->whereKey($request->user()->id))->count();
+        if ($request->user()->hasRole('super_admin') || $branchIds === []) {
+            return;
+        }
+        $count = app(OperationalScopeService::class)->visibleBranches($request->user())->whereIn('branches.id', array_unique($branchIds))->count();
         abort_if($count !== count(array_unique($branchIds)), 403, 'Una sucursal está fuera de tu ámbito.');
     }
 }

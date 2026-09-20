@@ -20,8 +20,7 @@ class ImportTest extends TestCase
         $actor->roles()->attach(Role::where('slug', 'super_admin')->firstOrFail());
         $token = $actor->createToken('angular')->plainTextToken;
         $branch = Branch::create(['code' => 'LIMA-01', 'name' => 'Sucursal Lima']);
-        $campaign = Campaign::create(['code' => 'CAMP-01', 'name' => 'Campaña 01', 'status' => 'open']);
-        $campaign->branches()->attach($branch);
+        $campaign = Campaign::create(['code' => 'CAMP-01', 'name' => 'Campaña 01', 'status' => 'open', 'branch_id' => $branch->id]);
 
         $this->withToken($token)
             ->postJson('/api/v1/imports/google-sheets', [
