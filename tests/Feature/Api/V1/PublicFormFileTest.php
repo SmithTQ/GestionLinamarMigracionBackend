@@ -24,13 +24,12 @@ class PublicFormFileTest extends TestCase
         Storage::fake('local');
         $this->seed();
         $branch = Branch::create(['code' => 'FILE-01', 'name' => 'Sucursal archivos']);
-        $campaign = Campaign::create(['code' => 'FILE-CAMP', 'name' => 'Campana archivos', 'status' => 'open']);
-        $campaign->branches()->attach($branch);
+        $campaign = Campaign::create(['code' => 'FILE-CAMP', 'name' => 'Campana archivos', 'status' => 'open', 'branch_id' => $branch->id]);
         $district = District::create(['code' => 'FILE-DIST', 'name' => 'Miraflores']);
-        $list = DistrictList::create(['code' => 'FILE-LIST', 'name' => 'Cobertura archivos', 'is_active' => true]);
+        $list = DistrictList::create(['branch_id' => $branch->id, 'code' => 'FILE-LIST', 'name' => 'Cobertura archivos', 'is_active' => true]);
         $list->districts()->attach($district);
         $campaign->districtLists()->attach($list);
-        $product = Product::create(['sku' => 'FILE-001', 'name' => 'Producto archivo', 'slug' => 'producto-archivo', 'base_price' => 10]);
+        $product = Product::create(['branch_id' => $branch->id, 'sku' => 'FILE-001', 'name' => 'Producto archivo', 'slug' => 'producto-archivo', 'base_price' => 10]);
         $campaign->products()->attach($product, ['price' => 10, 'is_available' => true]);
         $template = FormTemplate::with('fields')->where('code', 'campaign-order-v1')->firstOrFail();
         $form = CampaignForm::create(['campaign_id' => $campaign->id, 'branch_id' => $branch->id, 'template_id' => $template->id, 'public_key' => 'file-form-key', 'title' => 'Formulario archivos', 'status' => 'published', 'published_at' => now()]);
@@ -40,7 +39,7 @@ class PublicFormFileTest extends TestCase
             'submission_key' => 'file-submission-1', 'product_sku' => $product->sku,
             'sender_name' => 'Ana', 'sender_phone' => '987654321', 'recipient_name' => 'Luis',
             'recipient_phone' => '966554433', 'district_code' => $district->code,
-            'latitude' => -12.12, 'longitude' => -77.03,
+            'latitude' => -12.12, 'longitude' => -77.03, 'delivery_reference' => 'Casa azul frente al parque',
             'photo' => UploadedFile::fake()->image('entrega.jpg'),
         ]);
 

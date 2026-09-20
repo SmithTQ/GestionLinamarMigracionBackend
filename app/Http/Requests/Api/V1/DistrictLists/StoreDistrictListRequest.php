@@ -14,6 +14,7 @@ class StoreDistrictListRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'branch_id' => ['required', 'integer', 'exists:branches,id'],
             'code' => ['required', 'string', 'max:60', 'alpha_dash', 'unique:district_lists,code'],
             'name' => ['required', 'string', 'max:150'],
             'description' => ['nullable', 'string', 'max:5000'],

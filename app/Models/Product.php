@@ -14,7 +14,7 @@ class Product extends Model
     use HasFactory, SoftDeletes;
 
     protected $fillable = [
-        'subcategory_id', 'sku', 'name', 'slug', 'description', 'unit', 'base_price',
+        'branch_id', 'subcategory_id', 'sku', 'name', 'slug', 'description', 'unit', 'base_price',
         'image_url', 'image_path', 'image_thumbnail_path', 'is_active', 'sort_order',
     ];
 
@@ -36,6 +36,11 @@ class Product extends Model
     public function subcategory(): BelongsTo
     {
         return $this->belongsTo(ProductSubcategory::class, 'subcategory_id');
+    }
+
+    public function branch(): BelongsTo
+    {
+        return $this->belongsTo(Branch::class);
     }
 
     public function campaigns(): BelongsToMany

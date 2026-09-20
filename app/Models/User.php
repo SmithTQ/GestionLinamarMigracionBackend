@@ -27,7 +27,7 @@ class User extends Authenticatable
 
     public function campaigns(): BelongsToMany
     {
-        return $this->belongsToMany(Campaign::class);
+        return $this->belongsToMany(Campaign::class)->withPivot('is_active')->withTimestamps();
     }
 
     public function branches(): BelongsToMany

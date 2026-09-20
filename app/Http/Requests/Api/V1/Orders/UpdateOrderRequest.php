@@ -27,6 +27,7 @@ class UpdateOrderRequest extends FormRequest
             'district' => ['sometimes', 'required', 'string', 'max:120'],
             'district_id' => ['sometimes', 'nullable', 'integer', 'exists:districts,id'],
             'address' => ['sometimes', 'required', 'string', 'max:255'],
+            'delivery_reference' => ['sometimes', 'required', 'string', 'max:1000'],
             'latitude' => ['nullable', 'numeric', 'between:-90,90', 'required_with:longitude'],
             'longitude' => ['nullable', 'numeric', 'between:-180,180', 'required_with:latitude'],
             'location_accuracy' => ['nullable', 'numeric', 'min:0', 'max:100000'],

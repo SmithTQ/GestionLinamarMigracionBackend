@@ -17,6 +17,8 @@ use App\Models\Campaign;
 use App\Models\Product;
 use App\Models\ProductCategory;
 use App\Models\ProductSubcategory;
+use App\Models\User;
+use App\Services\Authorization\OperationalScopeService;
 use App\Services\Catalog\ProductIdentityService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -92,9 +94,12 @@ class ProductCatalogController extends Controller
     }
 
     #[OA\Get(path: '/api/v1/products', operationId: 'listProducts', tags: ['Productos'], summary: 'Listar productos', responses: [new OA\Response(response: 200, description: 'Productos obtenidos')])]
-    public function products(Request $request): JsonResponse
+    public function products(Request $request, OperationalScopeService $scope): JsonResponse
     {
-        $items = Product::query()->where('is_active', true)->with('subcategory.category')->when($request->filled('search'), fn ($query) => $query->where(fn ($q) => $q->where('name', 'like', '%'.$request->string('search')->toString().'%')->orWhere('sku', 'like', '%'.$request->string('search')->toString().'%')->orWhere('slug', 'like', '%'.$request->string('search')->toString().'%')))->when($request->filled('subcategory_id'), fn ($query) => $query->where('subcategory_id', $request->integer('subcategory_id')))->when($request->filled('category_id'), fn ($query) => $query->whereHas('subcategory', fn ($relation) => $relation->where('category_id', $request->integer('category_id'))))->when($request->filled('unit'), fn ($query) => $query->where('unit', $request->string('unit')->toString()))->when($request->filled('base_price_from'), fn ($query) => $query->where('base_price', '>=', $request->input('base_price_from')))->when($request->filled('base_price_to'), fn ($query) => $query->where('base_price', '<=', $request->input('base_price_to')))->tap(fn ($query) => $this->applySorting($query, $request, ['sort_order' => 'sort_order', 'name' => 'name', 'sku' => 'sku', 'base_price' => 'base_price', 'created_at' => 'created_at'], 'sort_order'))->paginate(min($request->integer('per_page', 50), 100));
+        $actor = $request->user();
+        abort_unless($actor instanceof User, 401, 'Debes iniciar sesión para consultar productos.');
+        $branchId = $scope->validatedBranchId($actor, $request->integer('branch_id') ?: null);
+        $items = Product::query()->when($branchId !== null, fn ($query) => $query->where('branch_id', $branchId), fn ($query) => $query->whereIn('branch_id', $scope->visibleBranches($actor)->select('branches.id')))->where('is_active', true)->with(['subcategory.category', 'branch'])->when($request->filled('search'), fn ($query) => $query->where(fn ($q) => $q->where('name', 'like', '%'.$request->string('search')->toString().'%')->orWhere('sku', 'like', '%'.$request->string('search')->toString().'%')->orWhere('slug', 'like', '%'.$request->string('search')->toString().'%')))->when($request->filled('subcategory_id'), fn ($query) => $query->where('subcategory_id', $request->integer('subcategory_id')))->when($request->filled('category_id'), fn ($query) => $query->whereHas('subcategory', fn ($relation) => $relation->where('category_id', $request->integer('category_id'))))->when($request->filled('unit'), fn ($query) => $query->where('unit', $request->string('unit')->toString()))->when($request->filled('base_price_from'), fn ($query) => $query->where('base_price', '>=', $request->input('base_price_from')))->when($request->filled('base_price_to'), fn ($query) => $query->where('base_price', '<=', $request->input('base_price_to')))->tap(fn ($query) => $this->applySorting($query, $request, ['sort_order' => 'sort_order', 'name' => 'name', 'sku' => 'sku', 'base_price' => 'base_price', 'created_at' => 'created_at'], 'sort_order'))->paginate(min($request->integer('per_page', 50), 100));
 
         return $this->paginatedResponse('Productos obtenidos.', $items, ProductResource::class);
     }
@@ -112,6 +117,7 @@ class ProductCatalogController extends Controller
                     required: ['name'],
                     properties: [
                         new OA\Property(property: 'name', type: 'string', example: 'Caja de rosas'),
+                        new OA\Property(property: 'branch_id', type: 'integer', example: 2),
                         new OA\Property(property: 'subcategory_id', type: 'integer', nullable: true, example: 1),
                         new OA\Property(property: 'sku', type: 'string', nullable: true, example: 'PROD-000001'),
                         new OA\Property(property: 'slug', type: 'string', nullable: true, example: 'caja-de-rosas'),
@@ -126,11 +132,12 @@ class ProductCatalogController extends Controller
         ),
         responses: [new OA\Response(response: 201, description: 'Producto creado')],
     )]
-    public function storeProduct(StoreProductRequest $request, ProductIdentityService $identity): JsonResponse
+    public function storeProduct(StoreProductRequest $request, ProductIdentityService $identity, OperationalScopeService $scope): JsonResponse
     {
+        $this->ensureBranchAccess($request->user(), (int) $request->validated('branch_id'), $scope);
         $product = $identity->create($request->validated());
 
-        return response()->json(['codigo' => 201, 'mensaje' => 'Producto creado.', 'datos' => new ProductResource($product->load('subcategory'))], 201);
+        return response()->json(['codigo' => 201, 'mensaje' => 'Producto creado.', 'datos' => new ProductResource($product->load(['subcategory', 'branch']))], 201);
     }
 
     #[OA\Patch(
@@ -158,9 +165,10 @@ class ProductCatalogController extends Controller
         ),
         responses: [new OA\Response(response: 200, description: 'Producto actualizado')],
     )]
-    public function updateProduct(UpdateProductRequest $request, int $product, ProductIdentityService $identity): JsonResponse
+    public function updateProduct(UpdateProductRequest $request, int $product, ProductIdentityService $identity, OperationalScopeService $scope): JsonResponse
     {
         $item = Product::findOrFail($product);
+        $this->ensureProductAccess($request->user(), $item, $scope);
         $data = $request->validated();
         $image = $data['image'] ?? null;
         unset($data['image']);
@@ -170,9 +178,10 @@ class ProductCatalogController extends Controller
     }
 
     #[OA\Delete(path: '/api/v1/products/{product}', operationId: 'deleteProduct', tags: ['Productos'], summary: 'Desactivar producto', responses: [new OA\Response(response: 200, description: 'Producto desactivado')])]
-    public function deleteProduct(int $product): JsonResponse
+    public function deleteProduct(Request $request, int $product, OperationalScopeService $scope): JsonResponse
     {
         $item = Product::findOrFail($product);
+        $this->ensureProductAccess($request->user(), $item, $scope);
         $item->update(['is_active' => false]);
         $item->delete();
 
@@ -180,9 +189,10 @@ class ProductCatalogController extends Controller
     }
 
     #[OA\Get(path: '/api/v1/campaigns/{campaign}/products', operationId: 'listCampaignProducts', tags: ['Productos'], summary: 'Listar productos de campaña', responses: [new OA\Response(response: 200, description: 'Productos de campaña obtenidos')])]
-    public function campaignProducts(Request $request, int $campaign): JsonResponse
+    public function campaignProducts(Request $request, int $campaign, OperationalScopeService $scope): JsonResponse
     {
         $item = Campaign::findOrFail($campaign);
+        $this->ensureCampaignAccess($request->user(), $item, $scope);
         $products = $item->products()->where('products.is_active', true)->when($request->has('is_available'), fn ($query) => $query->where('campaign_product.is_available', $request->boolean('is_available')), fn ($query) => $query->where('campaign_product.is_available', true))->when($request->filled('search'), fn ($query) => $query->where(fn ($sub) => $sub->where('products.name', 'like', '%'.$request->string('search')->toString().'%')->orWhere('products.sku', 'like', '%'.$request->string('search')->toString().'%')))->when($request->filled('subcategory_id'), fn ($query) => $query->where('products.subcategory_id', $request->integer('subcategory_id')))->tap(function ($query) use ($request): void {
             $sortBy = $request->string('sort_by')->toString();
             $direction = strtolower($request->string('sort_dir')->toString());
@@ -201,15 +211,32 @@ class ProductCatalogController extends Controller
     }
 
     #[OA\Put(path: '/api/v1/campaigns/{campaign}/products', operationId: 'assignCampaignProducts', tags: ['Productos'], summary: 'Configurar productos de campaña', responses: [new OA\Response(response: 200, description: 'Productos de campaña actualizados')])]
-    public function assignCampaignProducts(AssignCampaignProductsRequest $request, int $campaign): JsonResponse
+    public function assignCampaignProducts(AssignCampaignProductsRequest $request, int $campaign, OperationalScopeService $scope): JsonResponse
     {
         $item = Campaign::findOrFail($campaign);
+        $this->ensureCampaignAccess($request->user(), $item, $scope);
         $sync = [];
         foreach ($request->validated('products') as $product) {
+            abort_unless(Product::query()->whereKey($product['product_id'])->where('branch_id', $item->branch_id)->exists(), 422, 'Todos los productos deben pertenecer a la sucursal de la campaña.');
             $sync[$product['product_id']] = ['price' => $product['price'] ?? null, 'is_available' => $product['is_available'] ?? true, 'sort_order' => $product['sort_order'] ?? 0, 'max_quantity' => $product['max_quantity'] ?? null];
         }
         $item->products()->sync($sync);
 
         return response()->json(['codigo' => 200, 'mensaje' => 'Productos de campaña actualizados.', 'datos' => ProductResource::collection($item->products()->with('subcategory.category')->orderBy('campaign_product.sort_order')->orderBy('products.id')->get())]);
+    }
+
+    private function ensureCampaignAccess(?User $actor, Campaign $campaign, OperationalScopeService $scope): void
+    {
+        abort_unless($actor instanceof User && $scope->canAccessCampaign($actor, $campaign), 403, 'No tienes acceso a la campaña.');
+    }
+
+    private function ensureBranchAccess(?User $actor, int $branchId, OperationalScopeService $scope): void
+    {
+        abort_unless($actor instanceof User && $scope->canAccessBranch($actor, $branchId), 403, 'No tienes acceso a la sucursal seleccionada.');
+    }
+
+    private function ensureProductAccess(?User $actor, Product $product, OperationalScopeService $scope): void
+    {
+        $this->ensureBranchAccess($actor, (int) $product->branch_id, $scope);
     }
 }

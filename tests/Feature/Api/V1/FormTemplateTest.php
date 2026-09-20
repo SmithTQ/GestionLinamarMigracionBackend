@@ -72,8 +72,7 @@ class FormTemplateTest extends TestCase
         $this->seed();
         $token = $this->token();
         $branch = Branch::create(['code' => 'CENTRAL', 'name' => 'Sucursal interna']);
-        $campaign = Campaign::create(['code' => 'CAMP-TEMPLATE-TEST', 'name' => 'Campana plantilla', 'status' => 'open']);
-        $campaign->branches()->attach($branch);
+        $campaign = Campaign::create(['code' => 'CAMP-TEMPLATE-TEST', 'name' => 'Campana plantilla', 'status' => 'open', 'branch_id' => $branch->id]);
         $template = FormTemplate::where('code', 'campaign-order-v1')->firstOrFail();
         $other = FormTemplate::create(['code' => 'other-template', 'name' => 'Otra plantilla', 'is_active' => true]);
         $foreignField = FormField::create(['template_id' => $other->id, 'key' => 'foreign_field', 'label' => 'Campo externo', 'type' => 'text', 'is_system' => false, 'is_active' => true, 'sort_order' => 10]);

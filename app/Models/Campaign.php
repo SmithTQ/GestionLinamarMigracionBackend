@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -12,21 +13,21 @@ class Campaign extends Model
 {
     use HasFactory, SoftDeletes;
 
-    protected $fillable = ['code', 'name', 'status', 'starts_on', 'ends_on'];
+    protected $fillable = ['code', 'name', 'budget', 'branch_id', 'status', 'starts_on', 'ends_on'];
 
     protected function casts(): array
     {
-        return ['starts_on' => 'date', 'ends_on' => 'date'];
+        return ['budget' => 'decimal:2', 'starts_on' => 'date', 'ends_on' => 'date'];
     }
 
-    public function branches(): BelongsToMany
+    public function branch(): BelongsTo
     {
-        return $this->belongsToMany(Branch::class, 'campaign_branch');
+        return $this->belongsTo(Branch::class);
     }
 
     public function users(): BelongsToMany
     {
-        return $this->belongsToMany(User::class);
+        return $this->belongsToMany(User::class)->withPivot('is_active')->withTimestamps();
     }
 
     public function orders(): HasMany

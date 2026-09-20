@@ -110,6 +110,15 @@ paths:
       responses:
         200:
           description: 'Sucursal actualizada'
+  /api/v1/campaigns/available:
+    get:
+      tags:
+        - CampaÃ±as
+      summary: 'Listar campaÃ±as disponibles para el usuario'
+      operationId: listAvailableCampaigns
+      responses:
+        200:
+          description: 'CampaÃ±as disponibles'
   /api/v1/campaigns:
     get:
       tags:
@@ -132,6 +141,7 @@ paths:
               required:
                 - code
                 - name
+                - branch_id
               properties:
                 code:
                   type: string
@@ -150,12 +160,9 @@ paths:
                   type: string
                   format: date
                   nullable: true
-                branch_ids:
-                  type: array
-                  items:
-                    type: integer
-                  example:
-                    - 1
+                branch_id:
+                  type: integer
+                  example: 1
                 district_list_ids:
                   type: array
                   items:
@@ -208,10 +215,8 @@ paths:
                   type: string
                   format: date
                   nullable: true
-                branch_ids:
-                  type: array
-                  items:
-                    type: integer
+                branch_id:
+                  type: integer
                 district_list_ids:
                   type: array
                   items:
@@ -220,6 +225,43 @@ paths:
       responses:
         200:
           description: 'Campaña actualizada'
+  '/api/v1/campaigns/{campaign}/available-dispatchers':
+    get:
+      tags:
+        - 'Usuarios de campaña'
+      summary: 'Listar despachadores disponibles para la campaña'
+      operationId: listAvailableCampaignDispatchers
+      responses:
+        200:
+          description: 'Despachadores disponibles'
+  '/api/v1/campaigns/{campaign}/users':
+    get:
+      tags:
+        - 'Usuarios de campaÃ±a'
+      summary: 'Listar usuarios asignados a una campaÃ±a'
+      operationId: listCampaignUsers
+      responses:
+        200:
+          description: 'Usuarios obtenidos'
+    post:
+      tags:
+        - 'Usuarios de campaÃ±a'
+      summary: 'Asignar usuario a una campaÃ±a'
+      operationId: assignCampaignUser
+      responses:
+        201:
+          description: 'Usuario asignado'
+        409:
+          description: 'AsignaciÃ³n duplicada'
+  '/api/v1/campaigns/{campaign}/users/{user}':
+    delete:
+      tags:
+        - 'Usuarios de campaÃ±a'
+      summary: 'Desactivar usuario de una campaÃ±a'
+      operationId: removeCampaignUser
+      responses:
+        200:
+          description: 'AsignaciÃ³n desactivada'
   /api/v1/districts/departments:
     get:
       tags:
@@ -423,6 +465,9 @@ paths:
                 name:
                   type: string
                   example: 'Caja de rosas'
+                branch_id:
+                  type: integer
+                  example: 2
                 subcategory_id:
                   type: integer
                   example: 1
@@ -592,6 +637,117 @@ paths:
       responses:
         200:
           description: 'Motorizado actualizado'
+  '/api/v1/routes/{route}/access-token':
+    post:
+      tags:
+        - Rutas
+      summary: 'Crear enlace público seguro para una ruta'
+      operationId: createRouteAccessToken
+      responses:
+        201:
+          description: 'Enlace creado'
+    delete:
+      tags:
+        - Rutas
+      summary: 'Revocar enlace público de una ruta'
+      operationId: revokeRouteAccessToken
+      responses:
+        200:
+          description: 'Enlace revocado'
+  '/api/v1/routes/{route}/courier-invitations':
+    post:
+      tags:
+        - Rutas
+      summary: 'Asignar motorizado y generar invitación pública de ruta'
+      operationId: createCourierRouteInvitation
+      responses:
+        201:
+          description: 'Motorizado asignado e invitación generada'
+  /api/v1/routes/eligible-orders:
+    get:
+      tags:
+        - Rutas
+      summary: 'Listar pedidos elegibles para enrutar'
+      operationId: listEligibleRouteOrders
+      responses:
+        200:
+          description: 'Pedidos elegibles obtenidos'
+  /api/v1/routes/map-orders:
+    get:
+      tags:
+        - Rutas
+      summary: 'Listar pedidos ubicables para el mapa de rutas'
+      operationId: listMapRouteOrders
+      parameters:
+        -
+          name: campaign_id
+          in: query
+          required: true
+          schema:
+            type: integer
+            example: 1
+        -
+          name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            example: 1
+            minimum: 1
+        -
+          name: per_page
+          in: query
+          required: false
+          schema:
+            type: integer
+            example: 20
+            maximum: 100
+            minimum: 1
+        -
+          name: search
+          in: query
+          required: false
+          schema:
+            type: string
+            example: Maria
+        -
+          name: delivery_date
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date
+            example: '2026-09-20'
+        -
+          name: district_id
+          in: query
+          required: false
+          schema:
+            type: integer
+            example: 15
+      responses:
+        200:
+          description: 'Pedidos ubicables y resumen del mapa obtenidos'
+  /api/v1/routes/generate:
+    post:
+      tags:
+        - Rutas
+      summary: 'Generar ruta desde pedidos seleccionados'
+      operationId: generateRoute
+      responses:
+        201:
+          description: 'Ruta generada'
+        200:
+          description: 'Solicitud ya procesada'
+  '/api/v1/routes/{route}/stops':
+    put:
+      tags:
+        - Rutas
+      summary: 'Modificar paradas de una ruta'
+      operationId: updateRouteStops
+      responses:
+        200:
+          description: 'Paradas actualizadas'
   /api/v1/routes:
     get:
       tags:
@@ -653,6 +809,24 @@ paths:
       responses:
         200:
           description: 'Estado actualizado'
+  '/api/v1/public/routes/{token}':
+    get:
+      tags:
+        - 'Public routes'
+      summary: 'Consultar ruta mediante token seguro'
+      operationId: showPublicRoute
+      responses:
+        200:
+          description: 'Ruta publica obtenida'
+  '/api/v1/public/routes/{token}/orders/{order}/delivery-confirmation':
+    post:
+      tags:
+        - 'Public routes'
+      summary: 'Confirmar entrega con evidencia'
+      operationId: confirmPublicDelivery
+      responses:
+        200:
+          description: 'Entrega confirmada'
   /api/v1/campaign-forms:
     get:
       tags:
@@ -828,6 +1002,15 @@ paths:
           description: 'Pedido creado'
         200:
           description: 'Envío duplicado'
+  '/api/v1/internal/forms/{publicKey}/submissions':
+    post:
+      tags:
+        - 'Formularios internos'
+      summary: 'Registrar pedido interno desde un formulario'
+      operationId: submitInternalCampaignForm
+      responses:
+        201:
+          description: 'Pedido creado'
   /api/v1/imports/google-sheets:
     post:
       tags:
@@ -892,6 +1075,17 @@ paths:
       responses:
         200:
           description: 'Pedido actualizado'
+  '/api/v1/orders/{order}/delivery-evidence':
+    get:
+      tags:
+        - Pedidos
+      summary: 'Descargar evidencia de entrega'
+      operationId: showOrderDeliveryEvidence
+      responses:
+        200:
+          description: 'Evidencia descargada'
+        404:
+          description: 'Evidencia no encontrada'
   '/api/v1/orders/{order}/status':
     patch:
       tags:
@@ -962,6 +1156,43 @@ paths:
         200:
           description: 'Permisos obtenidos'
 components:
+  schemas:
+    CampaignResource:
+      properties:
+        id:
+          type: integer
+          example: 1
+        code:
+          type: string
+          example: CAMP-001
+        name:
+          type: string
+          example: 'Campaña de ejemplo'
+        budget:
+          type: string
+          example: '2500.00'
+          nullable: true
+        orders_count:
+          type: integer
+          example: 12
+        delivered_count:
+          type: integer
+          example: 8
+        total_obtained:
+          type: string
+          example: '1250.00'
+          nullable: true
+        status:
+          type: string
+          example: open
+        form_status:
+          type: string
+          example: published
+          nullable: true
+        has_published_form:
+          type: boolean
+          example: true
+      type: object
   securitySchemes:
     sanctum:
       type: http
@@ -975,6 +1206,9 @@ tags:
   -
     name: Campañas
     description: 'Campañas y su ámbito de sucursales'
+  -
+    name: 'Usuarios de campaÃ±a'
+    description: 'AsignaciÃ³n de usuarios a campaÃ±as'
   -
     name: Distritos
     description: 'Catálogo de distritos y zonas de entrega'
@@ -1011,6 +1245,18 @@ tags:
   -
     name: Autenticación
     description: Autenticación
+  -
+    name: CampaÃ±as
+    description: CampaÃ±as
+  -
+    name: 'Usuarios de campaña'
+    description: 'Usuarios de campaña'
+  -
+    name: 'Public routes'
+    description: 'Public routes'
+  -
+    name: 'Formularios internos'
+    description: 'Formularios internos'
 security:
   -
     sanctum: []

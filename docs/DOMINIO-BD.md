@@ -2,14 +2,14 @@
 
 ## Alcance implementado
 
-La migración `2026_09_07_210000_create_operational_foundation_tables` crea la base multi-campaña y multi-sucursal del backend.
+La migración `2026_09_07_210000_create_operational_foundation_tables` crea la base multi-campaña y multi-sucursal del backend. La migración `2026_09_15_530000_assign_branch_to_campaigns` consolida la relación de campaña a sucursal única, después de validar que cada campaña tenga exactamente una asignación.
 
 | Tabla | Propósito |
 | --- | --- |
 | `users` | Identidad Laravel, con usuario, estado activo y borrado lógico |
 | `branches` | Catálogo de sucursales operativas |
 | `campaigns` | Campañas independientes de pedidos y su ciclo de vida |
-| `campaign_branch` | Sucursales habilitadas para cada campaña |
+| `campaigns.branch_id` | Sucursal única obligatoria de cada campaña |
 | `roles` | Perfiles de acceso del sistema |
 | `permissions` | Capacidades atómicas por módulo y acción |
 | `permission_role` | Permisos asignados a cada rol |

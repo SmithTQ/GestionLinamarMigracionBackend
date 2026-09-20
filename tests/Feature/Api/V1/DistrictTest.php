@@ -52,6 +52,7 @@ class DistrictTest extends TestCase
 
         $branch = Branch::create(['code' => 'LIMA-01', 'name' => 'Sucursal Lima']);
         $districtList = $this->withToken($token)->postJson('/api/v1/district-lists', [
+            'branch_id' => $branch->id,
             'code' => 'LIMA-COVERAGE',
             'name' => 'Cobertura Lima',
             'district_ids' => [$district['id']],
@@ -60,7 +61,7 @@ class DistrictTest extends TestCase
             'code' => 'CAMP-DISTRICT-01',
             'name' => 'Campaña con distrito',
             'status' => 'open',
-            'branch_ids' => [$branch->id],
+            'branch_id' => $branch->id,
             'district_list_ids' => [$districtList['id']],
         ])->assertCreated()->assertJsonPath('datos.district_lists.0.code', 'LIMA-COVERAGE')->json('datos');
 
@@ -75,6 +76,7 @@ class DistrictTest extends TestCase
             'district' => 'Miraflores',
             'district_id' => $district['id'],
             'address' => 'Av. Arequipa 100',
+            'delivery_reference' => 'Casa azul frente al parque',
             'latitude' => -12.1211,
             'longitude' => -77.0302,
             'delivery_time' => '14:00 - 16:00',
@@ -89,7 +91,7 @@ class DistrictTest extends TestCase
             'campaign_id' => $campaign['id'], 'branch_id' => $branch->id,
             'product_name' => 'Ramo', 'sender_name' => 'Ana', 'sender_phone' => '987654321',
             'recipient_name' => 'Luis', 'recipient_phone' => '966554433', 'district' => 'Surco',
-            'district_id' => $otherDistrict['id'], 'address' => 'Jr. Test 1', 'delivery_time' => '14:00 - 16:00',
+            'district_id' => $otherDistrict['id'], 'address' => 'Jr. Test 1', 'delivery_reference' => 'Casa azul frente al parque', 'delivery_time' => '14:00 - 16:00',
         ])->assertStatus(422);
     }
 }

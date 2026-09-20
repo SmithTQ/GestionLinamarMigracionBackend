@@ -6,6 +6,7 @@ use App\Models\Branch;
 use App\Models\Campaign;
 use App\Models\CampaignForm;
 use App\Models\FormTemplate;
+use App\Models\Order;
 use App\Models\Role;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -32,9 +33,9 @@ class CatalogTest extends TestCase
             'code' => 'CAMP-2026-01',
             'name' => 'Campaña inicial',
             'status' => 'open',
-            'branch_ids' => [$branch['id']],
+            'branch_id' => $branch['id'],
         ])->assertCreated()
-            ->assertJsonPath('datos.branches.0.code', 'LIMA-01');
+            ->assertJsonPath('datos.branch.code', 'LIMA-01');
     }
 
     public function test_user_without_permission_receives_forbidden(): void
@@ -58,23 +59,20 @@ class CatalogTest extends TestCase
         $template = FormTemplate::where('code', 'campaign-order-v1')->firstOrFail();
         $branch = Branch::create(['code' => 'SUMMARY-01', 'name' => 'Sucursal resumen']);
 
-        $published = Campaign::create(['code' => 'SUMMARY-PUBLISHED', 'name' => 'Publicada', 'status' => 'open']);
-        $published->branches()->attach($branch);
+        $published = Campaign::create(['code' => 'SUMMARY-PUBLISHED', 'name' => 'Publicada', 'budget' => 2500, 'status' => 'open', 'branch_id' => $branch->id]);
+        Order::create(['campaign_id' => $published->id, 'branch_id' => $branch->id, 'product_name' => 'Ramo', 'product_price' => 100, 'sender_name' => 'Remitente', 'sender_phone' => '999000111', 'recipient_name' => 'Entregado', 'recipient_phone' => '999000222', 'district' => 'Miraflores', 'address' => 'Av. Lima 1', 'status' => 'delivered', 'is_active' => true]);
+        Order::create(['campaign_id' => $published->id, 'branch_id' => $branch->id, 'product_name' => 'Ramo', 'product_price' => 50, 'sender_name' => 'Remitente', 'sender_phone' => '999000111', 'recipient_name' => 'Pendiente', 'recipient_phone' => '999000222', 'district' => 'Miraflores', 'address' => 'Av. Lima 1', 'status' => 'pending', 'is_active' => true]);
+        Order::create(['campaign_id' => $published->id, 'branch_id' => $branch->id, 'product_name' => 'Ramo', 'product_price' => 20, 'sender_name' => 'Remitente', 'sender_phone' => '999000111', 'recipient_name' => 'Inactivo', 'recipient_phone' => '999000222', 'district' => 'Miraflores', 'address' => 'Av. Lima 1', 'status' => 'delivered', 'is_active' => false]);
         CampaignForm::create(['campaign_id' => $published->id, 'branch_id' => $branch->id, 'template_id' => $template->id, 'public_key' => 'summary-published', 'title' => 'Formulario publicado', 'status' => 'published', 'published_at' => now()]);
 
-        $draft = Campaign::create(['code' => 'SUMMARY-DRAFT', 'name' => 'Borrador', 'status' => 'open']);
-        $draft->branches()->attach($branch);
+        $draft = Campaign::create(['code' => 'SUMMARY-DRAFT', 'name' => 'Borrador', 'status' => 'open', 'branch_id' => $branch->id]);
         CampaignForm::create(['campaign_id' => $draft->id, 'branch_id' => $branch->id, 'template_id' => $template->id, 'public_key' => 'summary-draft', 'title' => 'Formulario borrador', 'status' => 'draft']);
 
-        $multiple = Campaign::create(['code' => 'SUMMARY-MULTIPLE', 'name' => 'Múltiples', 'status' => 'open']);
-        foreach (['closed', 'draft', 'published'] as $index => $status) {
-            $formBranch = Branch::create(['code' => 'SUMMARY-0'.($index + 2), 'name' => 'Sucursal '.$status]);
-            $multiple->branches()->attach($formBranch);
-            CampaignForm::create(['campaign_id' => $multiple->id, 'branch_id' => $formBranch->id, 'template_id' => $template->id, 'public_key' => 'summary-multiple-'.$index, 'title' => 'Formulario '.$status, 'status' => $status, 'published_at' => $status === 'published' ? now() : null]);
-        }
+        // A campaign now owns one branch, and campaign_forms enforces one form per campaign/branch.
+        $multiple = Campaign::create(['code' => 'SUMMARY-MULTIPLE', 'name' => 'Con formulario', 'status' => 'open', 'branch_id' => $branch->id]);
+        CampaignForm::create(['campaign_id' => $multiple->id, 'branch_id' => $branch->id, 'template_id' => $template->id, 'public_key' => 'summary-multiple', 'title' => 'Formulario publicado', 'status' => 'published', 'published_at' => now()]);
 
-        $none = Campaign::create(['code' => 'SUMMARY-NONE', 'name' => 'Sin formulario', 'status' => 'open']);
-        $none->branches()->attach($branch);
+        $none = Campaign::create(['code' => 'SUMMARY-NONE', 'name' => 'Sin formulario', 'status' => 'open', 'branch_id' => $branch->id]);
 
         DB::flushQueryLog();
         DB::enableQueryLog();
@@ -85,6 +83,11 @@ class CatalogTest extends TestCase
         $this->assertCampaignSummary($response->json('datos'), 'SUMMARY-DRAFT', 'draft', false);
         $this->assertCampaignSummary($response->json('datos'), 'SUMMARY-MULTIPLE', 'published', true);
         $this->assertCampaignSummary($response->json('datos'), 'SUMMARY-NONE', null, false);
+        $summary = collect($response->json('datos'))->firstWhere('code', 'SUMMARY-PUBLISHED');
+        $this->assertSame('2500.00', $summary['budget']);
+        $this->assertSame(2, $summary['orders_count']);
+        $this->assertSame(1, $summary['delivered_count']);
+        $this->assertSame('100.00', $summary['total_obtained']);
     }
 
     private function assertCampaignSummary(array $campaigns, string $code, ?string $formStatus, bool $hasPublishedForm): void

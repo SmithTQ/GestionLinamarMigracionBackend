@@ -53,13 +53,12 @@ class PublicInvitationPrefillTest extends TestCase
     private function createInvitation(string $token): FormInvitation
     {
         $branch = Branch::create(['code' => 'PREFILL-BRANCH', 'name' => 'Sucursal prefill']);
-        $campaign = Campaign::create(['code' => 'PREFILL-CAMP-'.$token, 'name' => 'Campana prefill', 'status' => 'open']);
-        $campaign->branches()->attach($branch);
+        $campaign = Campaign::create(['code' => 'PREFILL-CAMP-'.$token, 'name' => 'Campana prefill', 'status' => 'open', 'branch_id' => $branch->id]);
         $district = District::create(['code' => 'PREFILL-DIST-'.$token, 'name' => 'Miraflores']);
-        $districtList = DistrictList::create(['code' => 'PREFILL-LIST-'.$token, 'name' => 'Cobertura prefill', 'is_active' => true]);
+        $districtList = DistrictList::create(['branch_id' => $branch->id, 'code' => 'PREFILL-LIST-'.$token, 'name' => 'Cobertura prefill', 'is_active' => true]);
         $districtList->districts()->attach($district);
         $campaign->districtLists()->attach($districtList);
-        $product = Product::create(['sku' => 'PREFILL-'.$token, 'name' => 'Producto prefill', 'slug' => 'producto-'.$token, 'base_price' => 10]);
+        $product = Product::create(['branch_id' => $branch->id, 'sku' => 'PREFILL-'.$token, 'name' => 'Producto prefill', 'slug' => 'producto-'.$token, 'base_price' => 10]);
         $campaign->products()->attach($product, ['price' => 10, 'is_available' => true]);
         $template = FormTemplate::with('fields')->where('code', 'campaign-order-v1')->firstOrFail();
         $form = CampaignForm::create(['campaign_id' => $campaign->id, 'branch_id' => $branch->id, 'template_id' => $template->id, 'public_key' => 'public-'.$token, 'title' => 'Formulario prefill', 'status' => 'published', 'published_at' => now()]);

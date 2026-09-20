@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1\Forms;
 use App\Http\Controllers\Controller;
 use App\Models\FormSubmissionFile;
 use App\Models\User;
+use App\Services\Authorization\OperationalScopeService;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
@@ -60,6 +61,6 @@ class FormSubmissionFileController extends Controller
         abort_unless($order, 404);
         /** @var User $actor */
         $actor = $request->user();
-        abort_unless($actor->hasRole('super_admin') || ($order->campaign?->users()->whereKey($actor->id)->exists() && $order->branch?->users()->whereKey($actor->id)->exists()), 403);
+        abort_unless($order->campaign && $order->branch && app(OperationalScopeService::class)->canAccessCampaign($actor, $order->campaign) && app(OperationalScopeService::class)->canAccessBranch($actor, $order->branch), 403, 'No tienes acceso al archivo del pedido.');
     }
 }

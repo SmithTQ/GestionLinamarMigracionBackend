@@ -8,6 +8,8 @@ use App\Http\Requests\Api\V1\DistrictLists\UpdateDistrictListRequest;
 use App\Http\Resources\Api\V1\DistrictListResource;
 use App\Models\District;
 use App\Models\DistrictList;
+use App\Models\User;
+use App\Services\Authorization\OperationalScopeService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -17,10 +19,13 @@ use OpenApi\Attributes as OA;
 class DistrictListController extends Controller
 {
     #[OA\Get(path: '/api/v1/district-lists', operationId: 'listDistrictLists', tags: ['Plantillas de distritos'], summary: 'Listar plantillas de distritos', responses: [new OA\Response(response: 200, description: 'Plantillas obtenidas')])]
-    public function index(Request $request): JsonResponse
+    public function index(Request $request, OperationalScopeService $scope): JsonResponse
     {
-        $items = DistrictList::query()
+        $branchId = $scope->validatedBranchId($request->user(), $request->integer('branch_id') ?: null);
+        $items = $this->visibleQuery($request->user(), $scope)
+            ->when($branchId !== null, fn ($query) => $query->where('branch_id', $branchId))
             ->where('is_active', true)
+            ->with(['branch', 'districts'])
             ->withCount('districts')
             ->when($request->filled('search'), function ($query) use ($request): void {
                 $value = '%'.$request->string('search')->toString().'%';
@@ -33,9 +38,10 @@ class DistrictListController extends Controller
     }
 
     #[OA\Post(path: '/api/v1/district-lists', operationId: 'createDistrictList', tags: ['Plantillas de distritos'], summary: 'Crear plantilla de distritos', responses: [new OA\Response(response: 201, description: 'Plantilla creada')])]
-    public function store(StoreDistrictListRequest $request): JsonResponse
+    public function store(StoreDistrictListRequest $request, OperationalScopeService $scope): JsonResponse
     {
         $data = $request->validated();
+        $this->ensureBranchAccess($request->user(), $data['branch_id'], $scope);
         $districtIds = $data['district_ids'];
         unset($data['district_ids']);
         $this->ensureActiveDistricts($districtIds);
@@ -47,22 +53,25 @@ class DistrictListController extends Controller
             return $list;
         });
 
-        return response()->json(['codigo' => 201, 'mensaje' => 'Plantilla de distritos creada.', 'datos' => new DistrictListResource($list->load('districts'))], 201);
+        return response()->json(['codigo' => 201, 'mensaje' => 'Plantilla de distritos creada.', 'datos' => new DistrictListResource($list->load(['branch', 'districts']))], 201);
     }
 
     #[OA\Get(path: '/api/v1/district-lists/{districtList}', operationId: 'showDistrictList', tags: ['Plantillas de distritos'], summary: 'Consultar plantilla de distritos', responses: [new OA\Response(response: 200, description: 'Plantilla obtenida')])]
-    public function show(int $districtList): JsonResponse
+    public function show(Request $request, int $districtList, OperationalScopeService $scope): JsonResponse
     {
-        $list = DistrictList::with('districts')->findOrFail($districtList);
+        $list = $this->visibleQuery($request->user(), $scope)->with(['branch', 'districts'])->findOrFail($districtList);
 
         return response()->json(['codigo' => 200, 'mensaje' => 'Plantilla de distritos obtenida.', 'datos' => new DistrictListResource($list)]);
     }
 
     #[OA\Patch(path: '/api/v1/district-lists/{districtList}', operationId: 'updateDistrictList', tags: ['Plantillas de distritos'], summary: 'Actualizar plantilla de distritos', responses: [new OA\Response(response: 200, description: 'Plantilla actualizada')])]
-    public function update(UpdateDistrictListRequest $request, int $districtList): JsonResponse
+    public function update(UpdateDistrictListRequest $request, int $districtList, OperationalScopeService $scope): JsonResponse
     {
-        $list = DistrictList::findOrFail($districtList);
+        $list = $this->visibleQuery($request->user(), $scope)->findOrFail($districtList);
         $data = $request->validated();
+        if (array_key_exists('branch_id', $data)) {
+            $this->ensureBranchAccess($request->user(), $data['branch_id'], $scope);
+        }
         $districtIds = $data['district_ids'] ?? null;
         unset($data['district_ids']);
         if ($districtIds !== null) {
@@ -76,13 +85,13 @@ class DistrictListController extends Controller
             }
         });
 
-        return response()->json(['codigo' => 200, 'mensaje' => 'Plantilla de distritos actualizada.', 'datos' => new DistrictListResource($list->fresh('districts'))]);
+        return response()->json(['codigo' => 200, 'mensaje' => 'Plantilla de distritos actualizada.', 'datos' => new DistrictListResource($list->fresh(['branch', 'districts']))]);
     }
 
     #[OA\Delete(path: '/api/v1/district-lists/{districtList}', operationId: 'archiveDistrictList', tags: ['Plantillas de distritos'], summary: 'Desactivar plantilla de distritos', responses: [new OA\Response(response: 200, description: 'Plantilla desactivada')])]
-    public function destroy(int $districtList): JsonResponse
+    public function destroy(Request $request, int $districtList, OperationalScopeService $scope): JsonResponse
     {
-        $list = DistrictList::findOrFail($districtList);
+        $list = $this->visibleQuery($request->user(), $scope)->findOrFail($districtList);
         abort_if($list->campaigns()->whereIn('status', ['draft', 'open'])->exists(), 422, 'El listado está siendo utilizado por una campaña activa.');
         $list->update(['is_active' => false]);
         $list->delete();
@@ -103,5 +112,17 @@ class DistrictListController extends Controller
             $sync[$districtId] = ['sort_order' => ($position + 1) * 10];
         }
         $list->districts()->sync($sync);
+    }
+
+    private function visibleQuery(?User $actor, OperationalScopeService $scope)
+    {
+        abort_unless($actor instanceof User, 401, 'Debes iniciar sesión para consultar plantillas de distritos.');
+
+        return DistrictList::query()->whereIn('branch_id', $scope->visibleBranches($actor)->select('branches.id'));
+    }
+
+    private function ensureBranchAccess(?User $actor, int $branchId, OperationalScopeService $scope): void
+    {
+        abort_unless($actor instanceof User && $scope->canAccessBranch($actor, $branchId), 403, 'No tienes acceso a la sucursal seleccionada.');
     }
 }

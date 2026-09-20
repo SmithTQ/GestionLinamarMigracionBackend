@@ -21,13 +21,12 @@ class ProductCatalogTest extends TestCase
 
         $category = $this->withToken($token)->postJson('/api/v1/product-categories', ['name' => 'Flores', 'slug' => 'flores'])->assertCreated()->json('datos');
         $subcategory = $this->withToken($token)->postJson('/api/v1/product-subcategories', ['category_id' => $category['id'], 'name' => 'Ramos', 'slug' => 'ramos'])->assertCreated()->json('datos');
-        $product = $this->withToken($token)->postJson('/api/v1/products', ['subcategory_id' => $subcategory['id'], 'sku' => 'RAMO-001', 'name' => 'Ramo clásico', 'slug' => 'ramo-clasico', 'base_price' => 59.90])->assertCreated()->json('datos');
-
         $branch = Branch::create(['code' => 'LIMA-01', 'name' => 'Sucursal Lima']);
-        $campaign = $this->withToken($token)->postJson('/api/v1/campaigns', ['code' => 'CAMP-PRODUCT-01', 'name' => 'Campaña productos', 'status' => 'open', 'branch_ids' => [$branch->id]])->assertCreated()->json('datos');
+        $product = $this->withToken($token)->postJson('/api/v1/products', ['branch_id' => $branch->id, 'subcategory_id' => $subcategory['id'], 'sku' => 'RAMO-001', 'name' => 'Ramo clásico', 'slug' => 'ramo-clasico', 'base_price' => 59.90])->assertCreated()->json('datos');
+        $campaign = $this->withToken($token)->postJson('/api/v1/campaigns', ['code' => 'CAMP-PRODUCT-01', 'name' => 'Campaña productos', 'status' => 'open', 'branch_id' => $branch->id])->assertCreated()->json('datos');
         $this->withToken($token)->putJson('/api/v1/campaigns/'.$campaign['id'].'/products', ['products' => [['product_id' => $product['id'], 'price' => 64.90]]])->assertOk()->assertJsonPath('datos.0.campaign_pivot.price', '64.90');
 
-        $this->withToken($token)->postJson('/api/v1/orders', ['campaign_id' => $campaign['id'], 'branch_id' => $branch->id, 'product_id' => $product['id'], 'sender_name' => 'Ana', 'sender_phone' => '987654321', 'recipient_name' => 'Luis', 'recipient_phone' => '966554433', 'district' => 'Miraflores', 'address' => 'Av. Test 100', 'delivery_time' => '14:00 - 16:00'])->assertCreated()->assertJsonPath('datos.product_name', 'Ramo clásico')->assertJsonPath('datos.product_price', '64.90');
+        $this->withToken($token)->postJson('/api/v1/orders', ['campaign_id' => $campaign['id'], 'branch_id' => $branch->id, 'product_id' => $product['id'], 'sender_name' => 'Ana', 'sender_phone' => '987654321', 'recipient_name' => 'Luis', 'recipient_phone' => '966554433', 'district' => 'Miraflores', 'address' => 'Av. Test 100', 'delivery_reference' => 'Casa azul', 'delivery_time' => '14:00 - 16:00'])->assertCreated()->assertJsonPath('datos.product_name', 'Ramo clásico')->assertJsonPath('datos.product_price', '64.90');
     }
 
     public function test_campaign_products_can_filter_sort_and_return_pivot_data(): void
@@ -39,12 +38,11 @@ class ProductCatalogTest extends TestCase
 
         $category = $this->withToken($token)->postJson('/api/v1/product-categories', ['name' => 'Ramos', 'slug' => 'ramos-test'])->assertCreated()->json('datos');
         $subcategory = $this->withToken($token)->postJson('/api/v1/product-subcategories', ['category_id' => $category['id'], 'name' => 'Temporada', 'slug' => 'temporada-test'])->assertCreated()->json('datos');
-        $productA = $this->withToken($token)->postJson('/api/v1/products', ['subcategory_id' => $subcategory['id'], 'sku' => 'RAMO-AAA', 'name' => 'Ramo Alfa', 'slug' => 'ramo-alfa', 'base_price' => 20])->assertCreated()->json('datos');
-        $productB = $this->withToken($token)->postJson('/api/v1/products', ['subcategory_id' => $subcategory['id'], 'sku' => 'RAMO-BBB', 'name' => 'Ramo Beta', 'slug' => 'ramo-beta', 'base_price' => 30])->assertCreated()->json('datos');
-        $productC = $this->withToken($token)->postJson('/api/v1/products', ['subcategory_id' => $subcategory['id'], 'sku' => 'RAMO-CCC', 'name' => 'Ramo Gamma', 'slug' => 'ramo-gamma', 'base_price' => 40])->assertCreated()->json('datos');
-
         $branch = Branch::create(['code' => 'TEST-CATALOG', 'name' => 'Sucursal de prueba']);
-        $campaign = $this->withToken($token)->postJson('/api/v1/campaigns', ['code' => 'CAMP-CATALOG-TEST', 'name' => 'Campana catalogo', 'status' => 'open', 'branch_ids' => [$branch->id]])->assertCreated()->json('datos');
+        $productA = $this->withToken($token)->postJson('/api/v1/products', ['branch_id' => $branch->id, 'subcategory_id' => $subcategory['id'], 'sku' => 'RAMO-AAA', 'name' => 'Ramo Alfa', 'slug' => 'ramo-alfa', 'base_price' => 20])->assertCreated()->json('datos');
+        $productB = $this->withToken($token)->postJson('/api/v1/products', ['branch_id' => $branch->id, 'subcategory_id' => $subcategory['id'], 'sku' => 'RAMO-BBB', 'name' => 'Ramo Beta', 'slug' => 'ramo-beta', 'base_price' => 30])->assertCreated()->json('datos');
+        $productC = $this->withToken($token)->postJson('/api/v1/products', ['branch_id' => $branch->id, 'subcategory_id' => $subcategory['id'], 'sku' => 'RAMO-CCC', 'name' => 'Ramo Gamma', 'slug' => 'ramo-gamma', 'base_price' => 40])->assertCreated()->json('datos');
+        $campaign = $this->withToken($token)->postJson('/api/v1/campaigns', ['code' => 'CAMP-CATALOG-TEST', 'name' => 'Campana catalogo', 'status' => 'open', 'branch_id' => $branch->id])->assertCreated()->json('datos');
 
         $this->withToken($token)->putJson('/api/v1/campaigns/'.$campaign['id'].'/products', ['products' => [
             ['product_id' => $productA['id'], 'price' => 25, 'is_available' => false, 'sort_order' => 20, 'max_quantity' => 3],

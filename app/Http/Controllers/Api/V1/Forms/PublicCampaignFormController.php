@@ -8,6 +8,7 @@ use App\Models\CampaignForm;
 use App\Models\FormInvitation;
 use App\Models\FormSubmission;
 use App\Models\Order;
+use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
@@ -37,22 +38,27 @@ class PublicCampaignFormController extends Controller
     {
         $invitation = $this->invitation($token);
         abort_if($invitation->status === 'used', 409, 'Esta invitación ya fue utilizada.');
-        $response = $this->submit($request, $invitation->form->public_key);
-        if ($response->getStatusCode() === 201) {
-            $orderId = $response->getData(true)['datos']['order_id'] ?? null;
-            if ($orderId) {
-                Order::whereKey($orderId)->update(['customer_id' => $invitation->customer_id]);
-            } $invitation->update(['status' => 'used', 'used_at' => now()]);
-        }
 
-        return $response;
+        return DB::transaction(function () use ($request, $invitation): JsonResponse {
+            $invitation = FormInvitation::lockForUpdate()->findOrFail($invitation->id);
+            abort_if($invitation->status === 'used', 409, 'Esta invitacion ya fue utilizada.');
+            $response = $this->submit($request, $invitation->form->public_key);
+            if ($response->getStatusCode() === 201) {
+                $orderId = $response->getData(true)['datos']['order_id'] ?? null;
+                if ($orderId) {
+                    Order::whereKey($orderId)->update(['customer_id' => $invitation->customer_id]);
+                } $invitation->update(['status' => 'used', 'used_at' => now(), 'order_id' => $orderId]);
+            }
+
+            return $response;
+        });
     }
 
     #[OA\Get(path: '/api/v1/public/forms/{publicKey}', operationId: 'showPublicCampaignForm', tags: ['Formularios públicos'], summary: 'Consultar formulario público', responses: [new OA\Response(response: 200, description: 'Formulario público obtenido')])]
     public function show(string $publicKey): JsonResponse
     {
         $form = $this->publishedForm($publicKey);
-        $fields = $form->fields->filter(fn ($field) => $field->is_active && (bool) $field->pivot->is_enabled)->sortBy('pivot.sort_order')->values()->map(fn ($field) => ['key' => $field->key, 'label' => $field->pivot->label ?: $field->label, 'description' => $field->description, 'type' => $field->type, 'field_group' => $field->field_group, 'required' => (bool) $field->pivot->is_required, 'config' => $field->pivot->config ? json_decode($field->pivot->config, true) : null]);
+        $fields = $form->fields->filter(fn ($field) => $field->is_active && (bool) $field->pivot->is_enabled)->sortBy('pivot.sort_order')->values()->map(fn ($field) => ['key' => $field->key, 'label' => $field->pivot->label ?: $field->label, 'description' => $field->description, 'type' => $field->type, 'field_group' => $field->field_group, 'required' => $field->key === 'delivery_reference' || (bool) $field->pivot->is_required, 'config' => $field->pivot->config ? json_decode($field->pivot->config, true) : null]);
         $products = $form->campaign->products()->where('products.is_active', true)->wherePivot('is_available', true)->orderBy('campaign_product.sort_order')->orderBy('products.id')->get()->map(fn ($product) => ['sku' => $product->sku, 'name' => $product->name, 'unit' => $product->unit, 'price' => $product->pivot->price ?? $product->base_price, 'max_quantity' => $product->pivot->max_quantity, 'image_url' => $product->image_url, 'image_thumbnail_url' => $product->image_thumbnail_url]);
         $districts = $form->campaign->districtLists
             ->flatMap(fn ($list) => $list->districts)
@@ -66,6 +72,17 @@ class PublicCampaignFormController extends Controller
     }
 
     #[OA\Post(path: '/api/v1/public/forms/{publicKey}/submissions', operationId: 'submitPublicCampaignForm', tags: ['Formularios públicos'], summary: 'Enviar formulario público', responses: [new OA\Response(response: 201, description: 'Pedido creado'), new OA\Response(response: 200, description: 'Envío duplicado')])]
+    #[OA\Post(path: '/api/v1/internal/forms/{publicKey}/submissions', operationId: 'submitInternalCampaignForm', tags: ['Formularios internos'], summary: 'Registrar pedido interno desde un formulario', responses: [new OA\Response(response: 201, description: 'Pedido creado')])]
+    public function submitInternal(PublicFormSubmissionRequest $request, string $publicKey): JsonResponse
+    {
+        $form = $this->publishedForm($publicKey);
+        $actor = $request->user();
+        /** @phpstan-ignore-next-line Relation type is resolved by Eloquent at runtime. */
+        abort_unless($actor instanceof User && ($actor->hasRole('super_admin') || $form->campaign->users()->whereKey($actor->id)->wherePivot('is_active', true)->exists()), 403, 'No tienes acceso a esta campaña.');
+
+        return $this->submit($request, $publicKey);
+    }
+
     public function submit(PublicFormSubmissionRequest $request, string $publicKey): JsonResponse
     {
         $form = $this->publishedForm($publicKey);
@@ -87,7 +104,7 @@ class PublicCampaignFormController extends Controller
         $storedPaths = [];
         try {
             [$order,$submission] = DB::transaction(function () use ($form, $data, $payload, $product, $district, $request, $fileFields, &$storedPaths): array {
-                $order = Order::create(['campaign_id' => $form->campaign_id, 'branch_id' => $form->branch_id, 'product_id' => $product->id, 'product_name' => $product->name, 'product_price' => $product->pivot->price ?? $product->base_price, 'external_source' => 'public_form', 'external_key' => $data['submission_key'], 'sender_name' => $data['sender_name'], 'sender_phone' => $data['sender_phone'], 'recipient_name' => $data['recipient_name'], 'recipient_phone' => $data['recipient_phone'], 'district_id' => $district->id, 'district' => $district->name, 'address' => $data['address'] ?? '', 'latitude' => $data['latitude'], 'longitude' => $data['longitude'], 'location_accuracy' => $data['location_accuracy'] ?? null, 'dedication' => $data['dedication'] ?? null, 'delivery_date' => $data['delivery_date'] ?? null, 'delivery_time' => $data['delivery_time'] ?? null]);
+                $order = Order::create(['campaign_id' => $form->campaign_id, 'branch_id' => $form->branch_id, 'product_id' => $product->id, 'product_name' => $product->name, 'product_price' => $product->pivot->price ?? $product->base_price, 'external_source' => 'public_form', 'external_key' => $data['submission_key'], 'sender_name' => $data['sender_name'], 'sender_phone' => $data['sender_phone'], 'recipient_name' => $data['recipient_name'], 'recipient_phone' => $data['recipient_phone'], 'district_id' => $district->id, 'district' => $district->name, 'address' => $data['address'] ?? '', 'delivery_reference' => $data['delivery_reference'], 'latitude' => $data['latitude'], 'longitude' => $data['longitude'], 'location_accuracy' => $data['location_accuracy'] ?? null, 'dedication' => $data['dedication'] ?? null, 'delivery_date' => $data['delivery_date'] ?? null, 'delivery_time' => $data['delivery_time'] ?? null]);
                 $submission = FormSubmission::create(['campaign_form_id' => $form->id, 'order_id' => $order->id, 'submission_key' => $data['submission_key'], 'request_hash' => hash('sha256', json_encode($payload)), 'payload' => $payload, 'status' => 'accepted', 'ip_hash' => hash('sha256', (string) $request->ip())]);
 
                 foreach ($fileFields as $field) {

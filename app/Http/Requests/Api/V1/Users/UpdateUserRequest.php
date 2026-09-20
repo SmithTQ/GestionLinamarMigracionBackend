@@ -27,6 +27,7 @@ class UpdateUserRequest extends FormRequest
             'campaign_ids.*' => ['integer', 'distinct', 'exists:campaigns,id'],
             'branch_ids' => ['sometimes', 'array'],
             'branch_ids.*' => ['integer', 'distinct', 'exists:branches,id'],
+            'branch_id' => ['sometimes', 'nullable', 'integer', 'exists:branches,id'],
         ];
     }
 }

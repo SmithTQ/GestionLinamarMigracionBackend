@@ -15,6 +15,7 @@ class UpdateDistrictListRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'branch_id' => ['sometimes', 'required', 'integer', 'exists:branches,id'],
             'code' => ['sometimes', 'required', 'string', 'max:60', 'alpha_dash', Rule::unique('district_lists', 'code')->ignore($this->route('districtList'))],
             'name' => ['sometimes', 'required', 'string', 'max:150'],
             'description' => ['nullable', 'string', 'max:5000'],

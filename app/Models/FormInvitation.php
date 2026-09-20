@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class FormInvitation extends Model
 {
-    protected $fillable = ['campaign_form_id', 'customer_id', 'created_by_user_id', 'revoked_by_user_id', 'token', 'status', 'expires_at', 'used_at', 'revoked_at'];
+    protected $fillable = ['campaign_form_id', 'customer_id', 'order_id', 'created_by_user_id', 'revoked_by_user_id', 'token', 'status', 'expires_at', 'used_at', 'revoked_at'];
 
     protected function casts(): array
     {
@@ -22,6 +22,11 @@ class FormInvitation extends Model
     public function customer(): BelongsTo
     {
         return $this->belongsTo(Customer::class);
+    }
+
+    public function order(): BelongsTo
+    {
+        return $this->belongsTo(Order::class);
     }
 
     public function createdBy(): BelongsTo

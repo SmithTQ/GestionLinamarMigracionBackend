@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
@@ -11,7 +12,7 @@ class DistrictList extends Model
 {
     use HasFactory, SoftDeletes;
 
-    protected $fillable = ['code', 'name', 'description', 'is_active'];
+    protected $fillable = ['branch_id', 'code', 'name', 'description', 'is_active'];
 
     protected function casts(): array
     {
@@ -23,6 +24,11 @@ class DistrictList extends Model
         return $this->belongsToMany(District::class, 'district_list_items')
             ->withPivot('sort_order')
             ->orderBy('district_list_items.sort_order');
+    }
+
+    public function branch(): BelongsTo
+    {
+        return $this->belongsTo(Branch::class);
     }
 
     public function campaigns(): BelongsToMany

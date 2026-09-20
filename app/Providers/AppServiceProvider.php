@@ -37,5 +37,8 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('public-form', function (Request $request): Limit {
             return Limit::perMinute(20)->by($request->route('publicKey').'|'.$request->ip());
         });
+        RateLimiter::for('public-route', function (Request $request): Limit {
+            return Limit::perMinute(30)->by($request->route('token').'|'.$request->ip());
+        });
     }
 }

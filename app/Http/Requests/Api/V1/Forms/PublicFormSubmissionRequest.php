@@ -15,12 +15,12 @@ class PublicFormSubmissionRequest extends FormRequest
 
     private const RESERVED_KEYS = [
         'submission_key', 'product_sku', 'sender_name', 'sender_phone',
-        'recipient_name', 'recipient_phone', 'district_code', 'address',
+        'recipient_name', 'recipient_phone', 'district_code', 'address', 'delivery_reference',
         'latitude', 'longitude', 'location_accuracy', 'dedication',
         'delivery_date', 'delivery_time', 'photo', 'adicional',
     ];
 
-    private const FIXED_FIELD_KEYS = ['address', 'delivery_date', 'delivery_time', 'dedication', 'photo'];
+    private const FIXED_FIELD_KEYS = ['address', 'delivery_reference', 'delivery_date', 'delivery_time', 'dedication', 'photo'];
 
     private ?Collection $publicFields = null;
 
@@ -45,6 +45,7 @@ class PublicFormSubmissionRequest extends FormRequest
             'recipient_phone' => ['required', 'string', 'max:30'],
             'district_code' => ['required', 'string', 'max:20'],
             'address' => ['nullable', 'string', 'max:255'],
+            'delivery_reference' => ['required', 'string', 'max:1000'],
             'photo' => ['sometimes', 'nullable', 'file', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
             'latitude' => ['required', 'numeric', 'between:-90,90'],
             'longitude' => ['required', 'numeric', 'between:-180,180'],

@@ -3,8 +3,12 @@
 namespace App\Http\Resources\Api\V1;
 
 use App\Http\Resources\Concerns\FormatsResourceDates;
+use App\Models\Courier;
+use App\Models\DeliveryRoute;
 use App\Models\FormSubmission;
 use App\Models\Order;
+use App\Models\OrderDeliveryEvidence;
+use Carbon\CarbonImmutable;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -35,6 +39,7 @@ class OrderResource extends JsonResource
             'recipient_phone' => $this->recipient_phone,
             'district' => $this->district,
             'address' => $this->address,
+            'delivery_reference' => $this->delivery_reference,
             'latitude' => $this->latitude,
             'longitude' => $this->longitude,
             'location_accuracy' => $this->location_accuracy,
@@ -51,6 +56,29 @@ class OrderResource extends JsonResource
             'district_catalog' => new DistrictResource($this->whenLoaded('districtCatalog')),
             'product' => new ProductResource($this->whenLoaded('product')),
             'customer' => new CustomerResource($this->whenLoaded('customer')),
+            'delivery_evidence' => $this->deliveryEvidenceData(),
+            'route_stop' => $this->whenPivotLoaded('route_order', function (): array {
+                /** @phpstan-ignore-next-line Pivot is attached by the route_order relationship. */
+                $pivot = $this->pivot;
+
+                return [
+                    'sort_order' => $pivot->sort_order ?? $pivot->position,
+                    'assigned_at' => $this->formatResourceDateIso($pivot->assigned_at),
+                    'is_active' => (bool) $pivot->is_active,
+                ];
+            }),
+            'active_route' => $this->when($this->relationLoaded('activeRoutes'), function (): ?array {
+                /** @var DeliveryRoute|null $route */
+                $route = $this->activeRoutes->first();
+
+                return $route === null ? null : [
+                    'id' => $route->id,
+                    'code' => $route->code,
+                    'name' => $route->name,
+                    'status' => $route->status,
+                    'courier_id' => $route->courier_id,
+                ];
+            }),
             'created_at' => $this->formatResourceDate($this->created_at, 'd/m/Y H:i'),
             'created_at_iso' => $this->formatResourceDateIso($this->created_at),
             'updated_at' => $this->formatResourceDate($this->updated_at, 'd/m/Y H:i'),
@@ -96,5 +124,32 @@ class OrderResource extends JsonResource
         }
 
         return ['optional_fields' => $optional, 'custom_fields' => $custom, 'field_indicators' => $indicators];
+    }
+
+    private function deliveryEvidenceData(): ?array
+    {
+        if (! $this->relationLoaded('deliveryEvidences')) {
+            return null;
+        }
+
+        $evidence = $this->deliveryEvidences
+            ->sortByDesc(fn ($item): string => (string) $item->getAttribute('delivered_at'))
+            ->first();
+        if (! $evidence instanceof OrderDeliveryEvidence) {
+            return null;
+        }
+
+        $deliveredAtValue = $evidence->getAttribute('delivered_at');
+        $deliveredAt = $deliveredAtValue === null ? null : CarbonImmutable::parse((string) $deliveredAtValue);
+        /** @var Courier|null $courier */
+        $courier = $evidence->courier;
+
+        return [
+            'id' => $evidence->id,
+            'delivered_at' => $deliveredAt === null ? null : $deliveredAt->format('d/m/Y H:i'),
+            'delivered_at_iso' => $deliveredAt === null ? null : $deliveredAt->toISOString(),
+            'delivered_by_courier_id' => $evidence->delivered_by_courier_id,
+            'delivered_by_courier_name' => $courier?->name,
+        ];
     }
 }

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1\Auth;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\Auth\LoginRequest;
 use App\Models\User;
+use App\Services\Authorization\OperationalScopeService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -91,12 +92,39 @@ class AuthController extends Controller
             new OA\Response(response: 401, description: 'No autenticado'),
         ],
     )]
-    public function me(Request $request): JsonResponse
+    public function me(Request $request, OperationalScopeService $scope): JsonResponse
     {
+        $user = $request->user();
+        $campaigns = $scope->visibleCampaigns($user)
+            ->whereIn('campaigns.status', ['draft', 'open', 'closed'])
+            ->with('branch')
+            ->get();
+        $branches = $scope->visibleBranches($user)
+            ->where('is_active', true)
+            ->get();
+        $payload = $user->load('roles.permissions')->toArray();
+        $payload['campaigns'] = $campaigns->toArray();
+        $payload['branches'] = $branches->toArray();
+        $payload['campaign_context'] = [
+            'available_count' => $campaigns->count(),
+            'default_campaign_id' => $campaigns->count() === 1 ? $campaigns->first()->getKey() : null,
+            'branch_ids' => $branches->modelKeys(),
+            'campaign_ids' => $campaigns->modelKeys(),
+        ];
+        $payload['operational_context'] = [
+            'mode' => $user->hasRole('super_admin')
+                ? 'super_admin'
+                : ($user->hasRole('campaign_manager') ? 'branch_admin' : ($user->hasRole('dispatcher') ? 'campaign_dispatcher' : null)),
+            'branch_ids' => $branches->modelKeys(),
+            'campaign_ids' => $campaigns->modelKeys(),
+            'default_branch_id' => $branches->count() === 1 ? $branches->first()->getKey() : null,
+            'default_campaign_id' => $campaigns->count() === 1 ? $campaigns->first()->getKey() : null,
+        ];
+
         return response()->json([
             'codigo' => 200,
             'mensaje' => 'Usuario obtenido correctamente.',
-            'datos' => $request->user()->load('roles.permissions', 'campaigns', 'branches'),
+            'datos' => $payload,
         ]);
     }
 }

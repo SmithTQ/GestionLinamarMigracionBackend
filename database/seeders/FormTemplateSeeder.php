@@ -38,5 +38,6 @@ class FormTemplateSeeder extends Seeder
                 $field
             );
         }
+        $this->call(DeliveryReferenceFieldSeeder::class);
     }
 }

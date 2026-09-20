@@ -13,6 +13,7 @@ class ProductResource extends JsonResource
     {
         return [
             'id' => $this->id,
+            'branch_id' => $this->branch_id,
             'subcategory_id' => $this->subcategory_id,
             'sku' => $this->sku,
             'name' => $this->name,
@@ -25,6 +26,7 @@ class ProductResource extends JsonResource
             'is_active' => $this->is_active,
             'sort_order' => $this->sort_order,
             'subcategory' => new ProductSubcategoryResource($this->whenLoaded('subcategory')),
+            'branch' => new BranchResource($this->whenLoaded('branch')),
             'campaign_pivot' => $this->whenPivotLoaded('campaign_product', fn () => [
                 'price' => $this->formatMoney($this->pivot->price),
                 'is_available' => (bool) $this->pivot->is_available,

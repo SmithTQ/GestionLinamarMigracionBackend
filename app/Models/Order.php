@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
@@ -21,7 +22,7 @@ class Order extends Model
         'campaign_id', 'branch_id', 'customer_id', 'product_id', 'external_source', 'external_key', 'order_number',
         'district_id', 'latitude', 'longitude', 'location_accuracy',
         'product_name', 'sender_name', 'sender_phone', 'recipient_name', 'recipient_phone',
-        'district', 'address', 'dedication', 'delivery_date', 'delivery_time', 'imported_at', 'product_price',
+        'district', 'address', 'delivery_reference', 'dedication', 'delivery_date', 'delivery_time', 'imported_at', 'product_price',
         'status', 'is_active',
     ];
 
@@ -60,7 +61,12 @@ class Order extends Model
 
     public function routes(): BelongsToMany
     {
-        return $this->belongsToMany(DeliveryRoute::class, 'route_order', 'order_id', 'route_id')->withPivot(['position', 'is_active', 'assigned_at', 'removed_at'])->withTimestamps();
+        return $this->belongsToMany(DeliveryRoute::class, 'route_order', 'order_id', 'route_id')->withPivot(['position', 'sort_order', 'is_active', 'assigned_at', 'removed_at'])->withTimestamps();
+    }
+
+    public function activeRoutes(): BelongsToMany
+    {
+        return $this->routes()->wherePivot('is_active', true);
     }
 
     public function districtCatalog(): BelongsTo
@@ -71,5 +77,10 @@ class Order extends Model
     public function formSubmission(): HasOne
     {
         return $this->hasOne(FormSubmission::class);
+    }
+
+    public function deliveryEvidences(): HasMany
+    {
+        return $this->hasMany(OrderDeliveryEvidence::class);
     }
 }

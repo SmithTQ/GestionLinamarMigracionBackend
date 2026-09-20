@@ -7,6 +7,8 @@ El catalogo `districts` contiene el listado maestro de distritos y sus codigos U
 - `district_lists.view`: consultar plantillas.
 - `district_lists.manage`: crear, actualizar y desactivar plantillas.
 
+Cada plantilla pertenece a una sucursal. Los usuarios operativos solo pueden consultar y administrar plantillas de las sucursales incluidas en su ámbito.
+
 ## Endpoints
 
 - `GET /api/v1/district-lists`: lista paginada. Soporta `search`, `per_page`, `sort` y `direction`.
@@ -19,12 +21,15 @@ El catalogo `districts` contiene el listado maestro de distritos y sus codigos U
 
 ```json
 {
+  "branch_id": 2,
   "code": "LIMA_METROPOLITANA",
   "name": "Lima Metropolitana",
   "description": "Distritos con cobertura regular.",
   "district_ids": [1301, 1302, 1303]
 }
 ```
+
+La respuesta incluye `branch_id` y, cuando la relación está cargada, el objeto resumido `branch`.
 
 Solo se pueden asociar distritos activos del catalogo maestro. El orden del array se conserva en la plantilla.
 

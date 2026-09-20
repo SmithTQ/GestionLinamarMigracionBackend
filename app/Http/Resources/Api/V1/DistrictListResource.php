@@ -13,6 +13,8 @@ class DistrictListResource extends JsonResource
     {
         return [
             'id' => $this->id,
+            'branch_id' => $this->branch_id,
+            'branch' => new BranchResource($this->whenLoaded('branch')),
             'code' => $this->code,
             'name' => $this->name,
             'description' => $this->description,

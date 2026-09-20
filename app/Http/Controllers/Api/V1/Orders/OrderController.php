@@ -10,13 +10,16 @@ use App\Http\Resources\Api\V1\OrderResource;
 use App\Models\Branch;
 use App\Models\Campaign;
 use App\Models\Order;
+use App\Models\OrderDeliveryEvidence;
 use App\Models\Product;
 use App\Models\User;
+use App\Services\Authorization\OperationalScopeService;
 use App\Services\DeliveryDateNormalizer;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use InvalidArgumentException;
 use OpenApi\Attributes as OA;
 
@@ -26,6 +29,12 @@ class OrderController extends Controller
     #[OA\Get(path: '/api/v1/orders', operationId: 'listOrders', tags: ['Pedidos'], summary: 'Listar pedidos', responses: [new OA\Response(response: 200, description: 'Pedidos obtenidos')])]
     public function index(Request $request): JsonResponse
     {
+        abort_if(! $request->user()->hasRole('super_admin') && ! $request->filled('campaign_id'), 422, 'campaign_id es obligatorio para consultar pedidos.');
+        if ($request->filled('campaign_id')) {
+            $campaign = Campaign::findOrFail($request->integer('campaign_id'));
+            $this->ensureCampaignAccess($request->user(), $campaign, app(OperationalScopeService::class));
+        }
+
         $deliveryDate = null;
         if ($request->has('delivery_date')) {
             try {
@@ -35,8 +44,8 @@ class OrderController extends Controller
             }
         }
 
-        $orders = $this->visibleQuery($request->user())
-            ->with(['campaign', 'branch', 'districtCatalog', 'product', 'formSubmission.form.fields', 'formSubmission.files.field'])
+        $orders = $this->visibleQuery($request->user(), app(OperationalScopeService::class))
+            ->with(['campaign', 'branch', 'districtCatalog', 'product', 'deliveryEvidences.courier', 'formSubmission.form.fields', 'formSubmission.files.field'])
             ->when($request->filled('campaign_id'), fn (Builder $query) => $query->where('campaign_id', $request->integer('campaign_id')))
             ->when($request->filled('branch_id'), fn (Builder $query) => $query->where('branch_id', $request->integer('branch_id')))
             ->when($request->filled('status'), fn (Builder $query) => $query->where('status', $request->string('status')->toString()))
@@ -54,7 +63,7 @@ class OrderController extends Controller
         $data = $request->validated();
         $campaign = Campaign::findOrFail($data['campaign_id']);
         $branch = Branch::findOrFail($data['branch_id']);
-        $this->ensureOrderScope($request->user(), $campaign, $branch);
+        $this->ensureOrderScope($request->user(), $campaign, $branch, app(OperationalScopeService::class));
         $this->ensureDistrictBelongsToCampaign($campaign, $data['district_id'] ?? null);
         $this->applyCampaignProduct($campaign, $data);
         abort_if($campaign->status !== 'open', 422, 'La campaña no está abierta para registrar pedidos.');
@@ -74,15 +83,36 @@ class OrderController extends Controller
     #[OA\Get(path: '/api/v1/orders/{order}', operationId: 'showOrder', tags: ['Pedidos'], summary: 'Consultar pedido', responses: [new OA\Response(response: 200, description: 'Pedido obtenido')])]
     public function show(Request $request, int $order): JsonResponse
     {
-        $model = $this->visibleQuery($request->user())->with(['campaign', 'branch', 'districtCatalog', 'formSubmission.form.fields', 'formSubmission.files.field'])->findOrFail($order);
+        $model = $this->visibleQuery($request->user(), app(OperationalScopeService::class))->with(['campaign', 'branch', 'districtCatalog', 'deliveryEvidences.courier', 'formSubmission.form.fields', 'formSubmission.files.field'])->findOrFail($order);
 
         return response()->json(['codigo' => 200, 'mensaje' => 'Pedido obtenido.', 'datos' => new OrderResource($model)]);
+    }
+
+    #[OA\Get(path: '/api/v1/orders/{order}/delivery-evidence', operationId: 'showOrderDeliveryEvidence', tags: ['Pedidos'], summary: 'Descargar evidencia de entrega', responses: [new OA\Response(response: 200, description: 'Evidencia descargada'), new OA\Response(response: 404, description: 'Evidencia no encontrada')])]
+    public function deliveryEvidence(Request $request, int $order): mixed
+    {
+        $model = $this->visibleQuery($request->user(), app(OperationalScopeService::class))->findOrFail($order);
+        /** @var Order $model */
+        /** @var OrderDeliveryEvidence $evidence */
+        $evidence = $model->deliveryEvidences()->latest('delivered_at')->firstOrFail();
+        abort_unless(Storage::disk($evidence->disk)->exists($evidence->path), 404, 'La evidencia de entrega no está disponible.');
+
+        $stream = Storage::disk($evidence->disk)->readStream($evidence->path);
+        abort_unless(is_resource($stream), 404, 'La evidencia de entrega no está disponible.');
+
+        return response()->stream(function () use ($stream): void {
+            fpassthru($stream);
+            fclose($stream);
+        }, 200, [
+            'Content-Type' => $evidence->mime_type,
+            'Cache-Control' => 'private, max-age=300',
+        ]);
     }
 
     #[OA\Patch(path: '/api/v1/orders/{order}', operationId: 'updateOrder', tags: ['Pedidos'], summary: 'Actualizar datos operativos', responses: [new OA\Response(response: 200, description: 'Pedido actualizado')])]
     public function update(UpdateOrderRequest $request, int $order): JsonResponse
     {
-        $model = $this->visibleQuery($request->user())->with('campaign')->findOrFail($order);
+        $model = $this->visibleQuery($request->user(), app(OperationalScopeService::class))->with('campaign')->findOrFail($order);
         abort_if(in_array($model->status, ['delivered', 'cancelled'], true), 422, 'El pedido no admite cambios en su estado actual.');
         abort_if($model->campaign->status !== 'open', 422, 'La campaña no está abierta para modificar pedidos.');
 
@@ -96,7 +126,7 @@ class OrderController extends Controller
     #[OA\Patch(path: '/api/v1/orders/{order}/status', operationId: 'changeOrderStatus', tags: ['Pedidos'], summary: 'Cambiar estado del pedido', responses: [new OA\Response(response: 200, description: 'Estado actualizado')])]
     public function changeStatus(ChangeOrderStatusRequest $request, int $order): JsonResponse
     {
-        $model = $this->visibleQuery($request->user())->findOrFail($order);
+        $model = $this->visibleQuery($request->user(), app(OperationalScopeService::class))->findOrFail($order);
         $next = $request->string('status')->toString();
         $allowed = [
             'pending' => ['validated', 'cancelled'],
@@ -118,7 +148,7 @@ class OrderController extends Controller
     #[OA\Delete(path: '/api/v1/orders/{order}', operationId: 'archiveOrder', tags: ['Pedidos'], summary: 'Inhabilitar pedido', responses: [new OA\Response(response: 200, description: 'Pedido inhabilitado')])]
     public function destroy(Request $request, int $order): JsonResponse
     {
-        $model = $this->visibleQuery($request->user())->findOrFail($order);
+        $model = $this->visibleQuery($request->user(), app(OperationalScopeService::class))->findOrFail($order);
         abort_if(in_array($model->status, ['delivered', 'cancelled'], true), 422, 'El pedido no puede inhabilitarse en su estado actual.');
         $model->update(['is_active' => false]);
         $model->delete();
@@ -126,23 +156,15 @@ class OrderController extends Controller
         return response()->json(['codigo' => 200, 'mensaje' => 'Pedido inhabilitado.', 'datos' => null]);
     }
 
-    private function visibleQuery(User $actor): Builder
+    private function visibleQuery(User $actor, OperationalScopeService $scope): Builder
     {
-        $query = Order::query()->where('is_active', true);
-        if (! $actor->hasRole('super_admin')) {
-            $query->whereHas('campaign.users', fn (Builder $relation) => $relation->whereKey($actor->id))
-                ->whereHas('branch.users', fn (Builder $relation) => $relation->whereKey($actor->id));
-        }
-
-        return $query;
+        return Order::query()->where('is_active', true)->whereIn('campaign_id', $scope->visibleCampaigns($actor)->select('campaigns.id'));
     }
 
-    private function ensureOrderScope(User $actor, Campaign $campaign, Branch $branch): void
+    private function ensureOrderScope(User $actor, Campaign $campaign, Branch $branch, OperationalScopeService $scope): void
     {
-        abort_unless($campaign->branches()->whereKey($branch->id)->exists(), 422, 'La sucursal no pertenece a la campaña.');
-        if (! $actor->hasRole('super_admin')) {
-            abort_unless($campaign->users()->whereKey($actor->id)->exists() && $branch->users()->whereKey($actor->id)->exists(), 403, 'El pedido está fuera de tu ámbito.');
-        }
+        abort_unless($campaign->branch_id === $branch->id, 422, 'La sucursal no pertenece a la campaña.');
+        abort_unless($scope->canAccessCampaign($actor, $campaign) && $scope->canAccessBranch($actor, $branch), 403, 'El pedido está fuera de tu ámbito.');
     }
 
     private function sourceKey(array $data): array
@@ -152,6 +174,11 @@ class OrderController extends Controller
             'external_source' => $data['external_source'],
             'external_key' => $data['external_key'],
         ];
+    }
+
+    private function ensureCampaignAccess(User $actor, Campaign $campaign, OperationalScopeService $scope): void
+    {
+        abort_unless($scope->canAccessCampaign($actor, $campaign), 403, 'No tienes acceso a esta campaña.');
     }
 
     private function ensureDistrictBelongsToCampaign(Campaign $campaign, ?int $districtId): void

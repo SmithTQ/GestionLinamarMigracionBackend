@@ -37,6 +37,7 @@ class StoreOrderRequest extends FormRequest
             'recipient_phone' => ['required', 'string', 'max:30'],
             'district' => ['required', 'string', 'max:120'],
             'address' => ['required', 'string', 'max:255'],
+            'delivery_reference' => ['required', 'string', 'max:1000'],
             'latitude' => ['nullable', 'numeric', 'between:-90,90', 'required_with:longitude'],
             'longitude' => ['nullable', 'numeric', 'between:-180,180', 'required_with:latitude'],
             'location_accuracy' => ['nullable', 'numeric', 'min:0', 'max:100000'],

@@ -23,6 +23,8 @@ class DatabaseSeeder extends Seeder
             ['name' => 'Gestionar plantillas de distritos', 'slug' => 'district_lists.manage', 'module' => 'district_lists', 'action' => 'manage'],
             ['name' => 'Ver usuarios', 'slug' => 'users.view', 'module' => 'users', 'action' => 'view'],
             ['name' => 'Gestionar usuarios', 'slug' => 'users.manage', 'module' => 'users', 'action' => 'manage'],
+            ['name' => 'Ver usuarios de campaña', 'slug' => 'campaigns.users.view', 'module' => 'campaigns.users', 'action' => 'view'],
+            ['name' => 'Gestionar usuarios de campaña', 'slug' => 'campaigns.users.manage', 'module' => 'campaigns.users', 'action' => 'manage'],
             ['name' => 'Ver pedidos', 'slug' => 'orders.view', 'module' => 'orders', 'action' => 'view'],
             ['name' => 'Gestionar pedidos', 'slug' => 'orders.manage', 'module' => 'orders', 'action' => 'manage'],
             ['name' => 'Gestionar rutas', 'slug' => 'routes.manage', 'module' => 'routes', 'action' => 'manage'],
@@ -39,7 +41,7 @@ class DatabaseSeeder extends Seeder
 
         $roles = [
             'super_admin' => ['name' => 'Super administrador', 'description' => 'Acceso completo al sistema.'],
-            'campaign_manager' => ['name' => 'Gestor de campañas', 'description' => 'Administra campañas y pedidos asignados.'],
+            'campaign_manager' => ['name' => 'Administrador operativo', 'description' => 'Administra integralmente las campañas, formularios, invitaciones y pedidos que tenga asignados.'],
             'dispatcher' => ['name' => 'Despachador', 'description' => 'Organiza pedidos, rutas y motorizados.'],
             'courier' => ['name' => 'Motorizado', 'description' => 'Consulta y ejecuta sus rutas asignadas.'],
             'viewer' => ['name' => 'Consulta', 'description' => 'Acceso de solo lectura.'],
@@ -52,7 +54,7 @@ class DatabaseSeeder extends Seeder
                 $slug === 'super_admin'
                     ? Permission::query()->pluck('id')
                     : Permission::query()->whereIn('slug', match ($slug) {
-                        'campaign_manager' => ['campaigns.view', 'campaigns.manage', 'branches.view', 'districts.view', 'orders.view', 'orders.manage', 'imports.create', 'products.view', 'products.manage', 'forms.view', 'forms.manage', 'district_lists.view', 'district_lists.manage'],
+                        'campaign_manager' => ['campaigns.view', 'campaigns.manage', 'branches.view', 'districts.view', 'orders.view', 'orders.manage', 'imports.create', 'products.view', 'products.manage', 'forms.view', 'forms.manage', 'district_lists.view', 'district_lists.manage', 'users.view', 'users.manage', 'routes.manage', 'campaigns.users.view', 'campaigns.users.manage'],
                         'dispatcher' => ['campaigns.view', 'branches.view', 'districts.view', 'orders.view', 'orders.manage', 'routes.manage'],
                         'courier' => ['campaigns.view', 'branches.view', 'districts.view', 'orders.view'],
                         default => ['campaigns.view', 'branches.view', 'districts.view', 'district_lists.view', 'orders.view', 'products.view', 'forms.view'],
@@ -86,5 +88,6 @@ class DatabaseSeeder extends Seeder
         FormField::where('template_id', $template->id)->where('key', 'dedication')->update(['label' => 'Dedicatoria']);
         FormField::updateOrCreate(['template_id' => $template->id, 'key' => 'adicional'], ['label' => 'Adicional', 'type' => 'select', 'field_group' => 'optional_base', 'is_system' => true, 'is_active' => true, 'sort_order' => 115]);
         FormField::updateOrCreate(['template_id' => $template->id, 'key' => 'photo'], ['label' => 'Foto de referencia', 'description' => 'Imagen opcional relacionada con la entrega.', 'type' => 'file', 'field_group' => 'optional_base', 'is_system' => true, 'is_active' => true, 'sort_order' => 105]);
+        $this->call(DeliveryReferenceFieldSeeder::class);
     }
 }

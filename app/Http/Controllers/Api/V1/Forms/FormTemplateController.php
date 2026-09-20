@@ -19,7 +19,7 @@ use OpenApi\Attributes as OA;
 #[OA\Tag(name: 'Formularios', description: 'Administración de plantillas y campos')]
 class FormTemplateController extends Controller
 {
-    private const RESERVED_FIELD_KEYS = ['product', 'sender_name', 'sender_phone', 'recipient_name', 'recipient_phone', 'district', 'location', 'address', 'delivery_date', 'delivery_time', 'dedication', 'photo', 'adicional'];
+    private const RESERVED_FIELD_KEYS = ['product', 'sender_name', 'sender_phone', 'recipient_name', 'recipient_phone', 'district', 'location', 'delivery_reference', 'address', 'delivery_date', 'delivery_time', 'dedication', 'photo', 'adicional'];
 
     #[OA\Get(path: '/api/v1/form-templates', operationId: 'listFormTemplates', tags: ['Formularios'], summary: 'Listar plantillas', responses: [new OA\Response(response: 200, description: 'Plantillas obtenidas')])]
     public function index(Request $request): JsonResponse

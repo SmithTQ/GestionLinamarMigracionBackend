@@ -18,6 +18,8 @@ class UpdateBranchRequest extends FormRequest
             'code' => ['sometimes', 'required', 'string', 'max:30', 'alpha_dash', Rule::unique('branches', 'code')->ignore($this->route('branch'))],
             'name' => ['sometimes', 'required', 'string', 'max:150'],
             'address' => ['nullable', 'string', 'max:255'],
+            'latitude' => ['nullable', 'numeric', 'between:-90,90'],
+            'longitude' => ['nullable', 'numeric', 'between:-180,180'],
             'is_active' => ['sometimes', 'boolean'],
         ];
     }

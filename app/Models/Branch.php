@@ -12,16 +12,11 @@ class Branch extends Model
 {
     use HasFactory, SoftDeletes;
 
-    protected $fillable = ['code', 'name', 'address', 'is_active'];
+    protected $fillable = ['code', 'name', 'address', 'latitude', 'longitude', 'is_active'];
 
     protected function casts(): array
     {
-        return ['is_active' => 'boolean'];
-    }
-
-    public function campaigns(): BelongsToMany
-    {
-        return $this->belongsToMany(Campaign::class, 'campaign_branch');
+        return ['is_active' => 'boolean', 'latitude' => 'decimal:7', 'longitude' => 'decimal:7'];
     }
 
     public function users(): BelongsToMany
@@ -32,6 +27,11 @@ class Branch extends Model
     public function orders(): HasMany
     {
         return $this->hasMany(Order::class);
+    }
+
+    public function campaigns(): HasMany
+    {
+        return $this->hasMany(Campaign::class);
     }
 
     public function couriers(): BelongsToMany

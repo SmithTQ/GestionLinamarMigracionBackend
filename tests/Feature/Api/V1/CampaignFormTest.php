@@ -23,8 +23,7 @@ class CampaignFormTest extends TestCase
         $user->roles()->attach(Role::where('slug', 'super_admin')->firstOrFail());
         $token = $user->createToken('angular')->plainTextToken;
         $branch = Branch::create(['code' => 'LIMA-FORM', 'name' => 'Sucursal Formulario']);
-        $campaign = Campaign::create(['code' => 'CAMP-FORM-01', 'name' => 'Campaña formulario', 'status' => 'open']);
-        $campaign->branches()->attach($branch);
+        $campaign = Campaign::create(['code' => 'CAMP-FORM-01', 'name' => 'Campaña formulario', 'status' => 'open', 'branch_id' => $branch->id]);
         $template = FormTemplate::with('fields')->where('code', 'campaign-order-v1')->firstOrFail();
         $fields = $template->fields->map(fn ($field) => ['field_id' => $field->id, 'is_enabled' => true, 'is_required' => $field->key !== 'dedication', 'sort_order' => $field->sort_order])->values()->all();
 
@@ -39,15 +38,36 @@ class CampaignFormTest extends TestCase
         $user->roles()->attach(Role::where('slug', 'super_admin')->firstOrFail());
         $token = $user->createToken('angular')->plainTextToken;
         $branch = Branch::create(['code' => 'CENTRAL', 'name' => 'Sucursal interna']);
-        $campaign = Campaign::create(['code' => 'CAMP-FORM-DEFAULT', 'name' => 'Campana formulario', 'status' => 'open']);
+        $campaign = Campaign::create(['code' => 'CAMP-FORM-DEFAULT', 'name' => 'Campana formulario', 'status' => 'open', 'branch_id' => $branch->id]);
         $template = FormTemplate::with('fields')->where('code', 'campaign-order-v1')->firstOrFail();
-        $requiredKeys = ['product', 'sender_name', 'sender_phone', 'recipient_name', 'recipient_phone', 'district', 'location', 'delivery_time'];
+        $requiredKeys = ['product', 'sender_name', 'sender_phone', 'recipient_name', 'recipient_phone', 'district', 'location', 'delivery_reference', 'delivery_time'];
         $fields = $template->fields->map(fn ($field) => ['field_id' => $field->id, 'is_enabled' => true, 'is_required' => in_array($field->key, $requiredKeys, true), 'sort_order' => $field->sort_order])->values()->all();
 
         $this->withToken($token)
             ->postJson('/api/v1/campaign-forms', ['campaign_id' => $campaign->id, 'template_id' => $template->id, 'title' => 'Formulario interno', 'fields' => $fields])
             ->assertCreated()
             ->assertJsonPath('datos.branch_id', $branch->id);
+    }
+
+    public function test_delivery_reference_cannot_be_disabled_or_made_optional(): void
+    {
+        $this->seed();
+        $user = User::factory()->create(['is_active' => true]);
+        $user->roles()->attach(Role::where('slug', 'super_admin')->firstOrFail());
+        $token = $user->createToken('angular')->plainTextToken;
+        $branch = Branch::create(['code' => 'REF-BRANCH', 'name' => 'Sucursal referencia']);
+        $campaign = Campaign::create(['code' => 'CAMP-REF-01', 'name' => 'Campana referencia', 'status' => 'open', 'branch_id' => $branch->id]);
+        $template = FormTemplate::with('fields')->where('code', 'campaign-order-v1')->firstOrFail();
+        $fields = $template->fields->map(fn ($field) => [
+            'field_id' => $field->id,
+            'is_enabled' => $field->key !== 'delivery_reference',
+            'is_required' => false,
+            'sort_order' => $field->sort_order,
+        ])->values()->all();
+
+        $this->withToken($token)
+            ->postJson('/api/v1/campaign-forms', ['campaign_id' => $campaign->id, 'branch_id' => $branch->id, 'template_id' => $template->id, 'title' => 'Formulario referencia', 'fields' => $fields])
+            ->assertStatus(422);
     }
 
     public function test_campaign_configuration_saves_form_and_products_atomically(): void
@@ -57,11 +77,11 @@ class CampaignFormTest extends TestCase
         $user->roles()->attach(Role::where('slug', 'super_admin')->firstOrFail());
         $token = $user->createToken('angular')->plainTextToken;
         $branch = Branch::create(['code' => 'CENTRAL', 'name' => 'Sucursal interna']);
-        $campaign = Campaign::create(['code' => 'CAMP-CONFIG-01', 'name' => 'Campana configuracion', 'status' => 'open']);
+        $campaign = Campaign::create(['code' => 'CAMP-CONFIG-01', 'name' => 'Campana configuracion', 'status' => 'open', 'branch_id' => $branch->id]);
         $template = FormTemplate::with('fields')->where('code', 'campaign-order-v1')->firstOrFail();
-        $requiredKeys = ['product', 'sender_name', 'sender_phone', 'recipient_name', 'recipient_phone', 'district', 'location', 'delivery_time'];
+        $requiredKeys = ['product', 'sender_name', 'sender_phone', 'recipient_name', 'recipient_phone', 'district', 'location', 'delivery_reference', 'delivery_time'];
         $fields = $template->fields->map(fn ($field) => ['field_id' => $field->id, 'is_enabled' => true, 'is_required' => in_array($field->key, $requiredKeys, true), 'sort_order' => $field->sort_order])->values()->all();
-        $product = Product::create(['sku' => 'CONFIG-001', 'name' => 'Producto configuración', 'slug' => 'producto-configuracion', 'base_price' => 25]);
+        $product = Product::create(['branch_id' => $branch->id, 'sku' => 'CONFIG-001', 'name' => 'Producto configuración', 'slug' => 'producto-configuracion', 'base_price' => 25]);
 
         $this->withToken($token)->putJson('/api/v1/campaigns/'.$campaign->id.'/configuration', [
             'form' => ['template_id' => $template->id, 'title' => 'Formulario configurado', 'fields' => $fields],
@@ -78,11 +98,11 @@ class CampaignFormTest extends TestCase
         $user = User::factory()->create(['is_active' => true]);
         $user->roles()->attach(Role::where('slug', 'super_admin')->firstOrFail());
         $token = $user->createToken('angular')->plainTextToken;
-        $campaign = Campaign::create(['code' => 'CAMP-CONFIG-ROLLBACK', 'name' => 'Campana rollback', 'status' => 'open']);
+        $campaign = Campaign::create(['code' => 'CAMP-CONFIG-ROLLBACK', 'name' => 'Campana rollback', 'status' => 'open', 'branch_id' => Branch::create(['code' => 'ROLLBACK-BRANCH', 'name' => 'Sucursal rollback'])->id]);
         $template = FormTemplate::where('code', 'campaign-order-v1')->firstOrFail();
         $other = FormTemplate::create(['code' => 'foreign-template', 'name' => 'Plantilla externa', 'is_active' => true]);
         $foreignField = FormField::create(['template_id' => $other->id, 'key' => 'foreign_field', 'label' => 'Campo externo', 'type' => 'text', 'is_system' => false, 'is_active' => true, 'sort_order' => 10]);
-        $product = Product::create(['sku' => 'ROLLBACK-001', 'name' => 'Producto rollback', 'slug' => 'producto-rollback', 'base_price' => 25]);
+        $product = Product::create(['branch_id' => $campaign->branch_id, 'sku' => 'ROLLBACK-001', 'name' => 'Producto rollback', 'slug' => 'producto-rollback', 'base_price' => 25]);
 
         $this->withToken($token)->putJson('/api/v1/campaigns/'.$campaign->id.'/configuration', [
             'form' => ['template_id' => $template->id, 'title' => 'Debe revertirse', 'fields' => [['field_id' => $foreignField->id]]],
