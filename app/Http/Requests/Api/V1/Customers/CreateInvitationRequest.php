@@ -13,6 +13,6 @@ class CreateInvitationRequest extends FormRequest
 
     public function rules(): array
     {
-        return ['form_id' => ['required', 'integer', 'exists:campaign_forms,id'], 'full_name' => ['required', 'string', 'max:250'], 'whatsapp_number' => ['required', 'string', 'max:25'], 'email' => ['nullable', 'email', 'max:180'], 'expires_at' => ['nullable', 'date', 'after:now']];
+        return ['form_id' => ['required', 'integer', 'exists:campaign_forms,id'], 'full_name' => ['sometimes', 'nullable', 'string', 'max:250'], 'whatsapp_number' => ['required', 'string', 'max:25'], 'email' => ['nullable', 'email', 'max:180'], 'expires_at' => ['nullable', 'date', 'after:now']];
     }
 }

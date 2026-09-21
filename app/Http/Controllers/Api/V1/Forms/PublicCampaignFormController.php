@@ -4,12 +4,16 @@ namespace App\Http\Controllers\Api\V1\Forms;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\Forms\PublicFormSubmissionRequest;
+use App\Models\Campaign;
 use App\Models\CampaignForm;
+use App\Models\Customer;
 use App\Models\FormInvitation;
 use App\Models\FormSubmission;
 use App\Models\Order;
 use App\Models\User;
+use App\Services\Authorization\OperationalScopeService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -47,6 +51,9 @@ class PublicCampaignFormController extends Controller
                 $orderId = $response->getData(true)['datos']['order_id'] ?? null;
                 if ($orderId) {
                     Order::whereKey($orderId)->update(['customer_id' => $invitation->customer_id]);
+                    Customer::whereKey($invitation->customer_id)->update([
+                        'full_name' => $request->validated('sender_name'),
+                    ]);
                 } $invitation->update(['status' => 'used', 'used_at' => now(), 'order_id' => $orderId]);
             }
 
@@ -73,12 +80,24 @@ class PublicCampaignFormController extends Controller
 
     #[OA\Post(path: '/api/v1/public/forms/{publicKey}/submissions', operationId: 'submitPublicCampaignForm', tags: ['Formularios públicos'], summary: 'Enviar formulario público', responses: [new OA\Response(response: 201, description: 'Pedido creado'), new OA\Response(response: 200, description: 'Envío duplicado')])]
     #[OA\Post(path: '/api/v1/internal/forms/{publicKey}/submissions', operationId: 'submitInternalCampaignForm', tags: ['Formularios internos'], summary: 'Registrar pedido interno desde un formulario', responses: [new OA\Response(response: 201, description: 'Pedido creado')])]
+    #[OA\Get(path: '/api/v1/internal/forms/{publicKey}', operationId: 'showInternalCampaignForm', tags: ['Formularios internos'], summary: 'Consultar formulario interno', responses: [new OA\Response(response: 200, description: 'Formulario interno obtenido')])]
+    public function showInternal(Request $request, string $publicKey): JsonResponse
+    {
+        $form = $this->publishedForm($publicKey);
+        /** @var Campaign $campaign */
+        $campaign = $form->getRelation('campaign');
+        $this->ensureInternalCampaignAccess($request->user(), $campaign);
+
+        return $this->show($publicKey);
+    }
+
     public function submitInternal(PublicFormSubmissionRequest $request, string $publicKey): JsonResponse
     {
         $form = $this->publishedForm($publicKey);
         $actor = $request->user();
-        /** @phpstan-ignore-next-line Relation type is resolved by Eloquent at runtime. */
-        abort_unless($actor instanceof User && ($actor->hasRole('super_admin') || $form->campaign->users()->whereKey($actor->id)->wherePivot('is_active', true)->exists()), 403, 'No tienes acceso a esta campaña.');
+        /** @var Campaign $campaign */
+        $campaign = $form->getRelation('campaign');
+        $this->ensureInternalCampaignAccess($actor, $campaign);
 
         return $this->submit($request, $publicKey);
     }
@@ -137,6 +156,11 @@ class PublicCampaignFormController extends Controller
         abort_if($form->campaign->status !== 'open', 404, 'Formulario no disponible.');
 
         return $form;
+    }
+
+    private function ensureInternalCampaignAccess(?User $actor, Campaign $campaign): void
+    {
+        abort_unless($actor instanceof User && app(OperationalScopeService::class)->canAccessCampaign($actor, $campaign), 403, 'No tienes acceso a esta campaña.');
     }
 
     private function invitation(string $token): FormInvitation

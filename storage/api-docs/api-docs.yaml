@@ -1011,6 +1011,15 @@ paths:
       responses:
         201:
           description: 'Pedido creado'
+  '/api/v1/internal/forms/{publicKey}':
+    get:
+      tags:
+        - 'Formularios internos'
+      summary: 'Consultar formulario interno'
+      operationId: showInternalCampaignForm
+      responses:
+        200:
+          description: 'Formulario interno obtenido'
   /api/v1/imports/google-sheets:
     post:
       tags:

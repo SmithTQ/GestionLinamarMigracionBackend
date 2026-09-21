@@ -49,7 +49,18 @@ class CustomerInvitationController extends Controller
         $campaign = $form->campaign;
         $this->ensureCampaignAccess($request->user(), $campaign);
         abort_unless($form->status === 'published' && $form->campaign->status === 'open', 422, 'El formulario no está disponible.');
-        $customer = Customer::updateOrCreate(['whatsapp_number' => $number], ['full_name' => $data['full_name'], 'email' => $data['email'] ?? null, 'is_active' => true]);
+        $customer = Customer::firstOrNew(['whatsapp_number' => $number]);
+        if (! $customer->exists) {
+            $customer->full_name = '';
+        }
+        if (filled($data['full_name'] ?? null)) {
+            $customer->full_name = trim($data['full_name']);
+        }
+        if (array_key_exists('email', $data)) {
+            $customer->email = $data['email'];
+        }
+        $customer->is_active = true;
+        $customer->save();
         $invitation = FormInvitation::where('campaign_form_id', $form->id)->where('customer_id', $customer->id)->first();
         abort_if($invitation?->status === 'used', 409, 'El cliente ya utilizó este formulario.');
         if (! $invitation) {
@@ -96,7 +107,8 @@ class CustomerInvitationController extends Controller
     private function invitationPayload(FormInvitation $invitation, Customer $customer): array
     {
         $url = rtrim((string) config('forms.frontend_url'), '/').'/formulario/invitacion/'.$invitation->token;
+        $greeting = $customer->full_name !== '' ? 'Hola '.$customer->full_name.'. ' : 'Hola. ';
 
-        return ['customer' => new CustomerResource($customer), 'invitation_token' => $invitation->token, 'form_url' => $url, 'whatsapp_url' => 'https://wa.me/'.$customer->whatsapp_number.'?text='.rawurlencode('Hola '.$customer->full_name.'. Completa tu pedido aquí: '.$url), 'status' => $invitation->status, 'expires_at' => $invitation->expires_at?->format('d/m/Y H:i'), 'expires_at_iso' => $invitation->expires_at?->toISOString()];
+        return ['customer' => new CustomerResource($customer), 'invitation_token' => $invitation->token, 'form_url' => $url, 'whatsapp_url' => 'https://wa.me/'.$customer->whatsapp_number.'?text='.rawurlencode($greeting.'Completa tu pedido aquí: '.$url), 'status' => $invitation->status, 'expires_at' => $invitation->expires_at?->format('d/m/Y H:i'), 'expires_at_iso' => $invitation->expires_at?->toISOString()];
     }
 }

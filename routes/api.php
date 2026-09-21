@@ -95,7 +95,7 @@ Route::prefix('v1')->group(function (): void {
         Route::post('/campaign-forms/{form}/close', [CampaignFormController::class, 'close'])->middleware('permission:forms.manage');
 
         Route::get('/campaigns/available', [CampaignController::class, 'available'])->middleware('permission:campaigns.view');
-        Route::get('/internal/forms/{publicKey}', [PublicCampaignFormController::class, 'show'])->middleware('permission:forms.view');
+        Route::get('/internal/forms/{publicKey}', [PublicCampaignFormController::class, 'showInternal'])->middleware('permission:orders.view');
         Route::post('/internal/forms/{publicKey}/submissions', [PublicCampaignFormController::class, 'submitInternal'])->middleware('permission:orders.manage');
         Route::get('/campaigns/{campaign}/users', [CampaignUserController::class, 'index'])->middleware('permission:campaigns.users.view');
         Route::get('/campaigns/{campaign}/available-dispatchers', [CampaignUserController::class, 'availableDispatchers'])->middleware('permission:campaigns.users.manage');
